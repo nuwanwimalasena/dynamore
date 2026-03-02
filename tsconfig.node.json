@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "target": "ESNext",
+        "outDir": "dist-electron",
+        "baseUrl": ".",
+        "paths": {
+            "@main/*": [
+                "electron/main/*"
+            ]
+        }
+    },
+    "include": [
+        "electron"
+    ]
+}
