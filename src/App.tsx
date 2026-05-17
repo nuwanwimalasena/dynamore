@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAppStore } from './store/appStore'
 import LoginPage from './pages/LoginPage'
 import MainLayout from './pages/MainLayout'
+import UpdateNotification from './components/UpdateNotification'
 
 export default function App() {
     const { session, setSession } = useAppStore()
@@ -13,17 +14,22 @@ export default function App() {
     }, [setSession])
 
     return (
-        <HashRouter>
-            <Routes>
-                <Route
-                    path="/login"
-                    element={session ? <Navigate to="/tables" replace /> : <LoginPage />}
-                />
-                <Route
-                    path="/*"
-                    element={session ? <MainLayout /> : <Navigate to="/login" replace />}
-                />
-            </Routes>
-        </HashRouter>
+        <>
+            <HashRouter>
+                <Routes>
+                    <Route
+                        path="/login"
+                        element={session ? <Navigate to="/tables" replace /> : <LoginPage />}
+                    />
+                    <Route
+                        path="/*"
+                        element={session ? <MainLayout /> : <Navigate to="/login" replace />}
+                    />
+                </Routes>
+            </HashRouter>
+
+            {/* Auto-update notification — rendered outside the router so it persists across route changes */}
+            <UpdateNotification />
+        </>
     )
 }

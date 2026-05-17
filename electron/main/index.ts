@@ -5,6 +5,7 @@ import { registerAuthHandlers } from './ipc/auth'
 import { registerTableHandlers } from './ipc/tables'
 import { registerItemHandlers } from './ipc/items'
 import { registerQueryHandlers } from './ipc/query'
+import { registerUpdaterHandlers, scheduleUpdateCheck } from './ipc/updater'
 
 function createWindow(): BrowserWindow {
     const iconPath = join(__dirname, '../../resources/icon.png')
@@ -58,7 +59,9 @@ app.whenReady().then(() => {
     registerItemHandlers(ipcMain)
     registerQueryHandlers(ipcMain)
 
-    createWindow()
+    const mainWindow = createWindow()
+    registerUpdaterHandlers(ipcMain, mainWindow)
+    scheduleUpdateCheck()
 
     app.on('activate', function () {
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
