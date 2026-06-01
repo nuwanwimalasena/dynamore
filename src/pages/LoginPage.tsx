@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Typography, Steps, Alert, List, Select } from 'antd'
-import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutlined, RightOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Typography, Steps, Alert, List, Select, Tooltip } from 'antd'
+import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutlined, RightOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
 import type { AWSAccount, AWSRole } from '../types/global'
 
@@ -45,7 +45,7 @@ const AWS_REGIONS = [
 
 export default function LoginPage() {
     const [form] = Form.useForm<LoginFormValues>()
-    const { setSession } = useAppStore()
+    const { setSession, theme, setTheme } = useAppStore()
     const [step, setStep] = useState<LoginStep>('config')
     const [statusMsg, setStatusMsg] = useState('')
     const [errorMsg, setErrorMsg] = useState('')
@@ -174,10 +174,21 @@ export default function LoginPage() {
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
             <div className="auth-bg" />
 
-            <div className="titlebar" style={{ background: 'transparent', borderBottom: 'none' }}>
+            <div className="titlebar" style={{ background: 'transparent', borderBottom: 'none', paddingLeft: 80, paddingRight: 16 }}>
                 <div style={{ flex: 1 }} />
                 <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12, opacity: 0.6 }}>Dynamore</Text>
                 <div style={{ flex: 1 }} />
+                <div className="titlebar-nodrag" style={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={theme === 'light' ? <MoonOutlined /> : <SunOutlined />}
+                            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                            style={{ color: 'var(--color-text-secondary)' }}
+                        />
+                    </Tooltip>
+                </div>
             </div>
 
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 1 }}>

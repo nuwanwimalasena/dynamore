@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Input, Button, Tooltip, Spin, App as AntApp, Modal, Typography } from 'antd'
+import { Input, Button, Tooltip, Spin, App as AntApp, Modal, Typography, Divider } from 'antd'
 import {
     TableOutlined,
     SearchOutlined,
     PlusOutlined,
     ReloadOutlined,
-    DeleteOutlined
+    DeleteOutlined,
+    PushpinOutlined,
+    PushpinFilled
 } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
 import CreateTableWizard from '../pages/CreateTableWizard'
@@ -13,11 +15,38 @@ import CreateTableWizard from '../pages/CreateTableWizard'
 const { Text } = Typography
 
 export default function Sidebar() {
-    const { tableNames, selectedTable, setTableNames, setSelectedTable, setTableDetail } = useAppStore()
+    const { tableNames, selectedTable, setTableNames, setSelectedTable, setTableDetail, session } = useAppStore()
     const { message, modal } = AntApp.useApp()
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
     const [showCreate, setShowCreate] = useState(false)
+    const [pinnedTables, setPinnedTables] = useState<string[]>([])
+
+    const getStorageKey = () => {
+        if (!session) return ''
+        return `pinned:${session.roleName}:${session.accountId}:${session.region}`
+    }
+
+    useEffect(() => {
+        const key = getStorageKey()
+        if (key) {
+            const saved = localStorage.getItem(key)
+            setPinnedTables(saved ? JSON.parse(saved) : [])
+        } else {
+            setPinnedTables([])
+        }
+    }, [session])
+
+    const togglePin = (name: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        const key = getStorageKey()
+        if (!key) return
+        const newPinned = pinnedTables.includes(name)
+            ? pinnedTables.filter(t => t !== name)
+            : [...pinnedTables, name]
+        setPinnedTables(newPinned)
+        localStorage.setItem(key, JSON.stringify(newPinned))
+    }
 
     const loadTables = async () => {
         setLoading(true)
@@ -66,6 +95,53 @@ export default function Sidebar() {
     }
 
     const filtered = tableNames.filter((n) => n.toLowerCase().includes(search.toLowerCase()))
+    const filteredPinned = filtered.filter((n) => pinnedTables.includes(n))
+    const filteredUnpinned = filtered.filter((n) => !pinnedTables.includes(n))
+
+    const renderTableItem = (name: string, isPinned: boolean) => {
+        return (
+            <div
+                key={name}
+                className={`sidebar-item ${selectedTable === name ? 'active' : ''}`}
+                onClick={() => handleSelectTable(name)}
+                title={name}
+                style={{ justifyContent: 'space-between', paddingRight: 8 }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                    <TableOutlined style={{ flexShrink: 0, fontSize: 13 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <Tooltip title={isPinned ? "Unpin table" : "Pin table"}>
+                        <Button
+                            type="text"
+                            size="small"
+                            className="pin-btn"
+                            icon={isPinned ? <PushpinFilled style={{ color: 'var(--color-accent-blue)' }} /> : <PushpinOutlined />}
+                            onClick={(e) => togglePin(name, e)}
+                            style={{
+                                opacity: isPinned ? 1 : 0,
+                                color: isPinned ? 'var(--color-accent-blue)' : 'var(--color-text-secondary)',
+                                transition: 'opacity 0.2s ease',
+                            }}
+                        />
+                    </Tooltip>
+                    {selectedTable === name && (
+                        <Tooltip title="Delete table">
+                            <Button
+                                type="text"
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteTable(name) }}
+                                style={{ opacity: 0.6 }}
+                            />
+                        </Tooltip>
+                    )}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <>
@@ -119,33 +195,32 @@ export default function Sidebar() {
                                 {search ? 'No match' : 'No tables found'}
                             </Text>
                         </div>
+                    ) : pinnedTables.length > 0 ? (
+                        <>
+                            {filteredPinned.length > 0 && (
+                                <>
+                                    <div style={{ padding: '8px 16px 4px 16px' }}>
+                                        <Text style={{ color: 'var(--color-text-secondary)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', opacity: 0.8 }}>
+                                            Pinned
+                                        </Text>
+                                    </div>
+                                    {filteredPinned.map((name) => renderTableItem(name, true))}
+                                </>
+                            )}
+                            {filteredUnpinned.length > 0 && (
+                                <>
+                                    {filteredPinned.length > 0 && <Divider style={{ margin: '8px 0', borderColor: 'var(--color-border)' }} />}
+                                    <div style={{ padding: '8px 16px 4px 16px' }}>
+                                        <Text style={{ color: 'var(--color-text-secondary)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', opacity: 0.8 }}>
+                                            Other Tables
+                                        </Text>
+                                    </div>
+                                    {filteredUnpinned.map((name) => renderTableItem(name, false))}
+                                </>
+                            )}
+                        </>
                     ) : (
-                        filtered.map((name) => (
-                            <div
-                                key={name}
-                                className={`sidebar-item ${selectedTable === name ? 'active' : ''}`}
-                                onClick={() => handleSelectTable(name)}
-                                title={name}
-                                style={{ justifyContent: 'space-between', paddingRight: 8 }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                                    <TableOutlined style={{ flexShrink: 0, fontSize: 13 }} />
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-                                </div>
-                                {selectedTable === name && (
-                                    <Tooltip title="Delete table">
-                                        <Button
-                                            type="text"
-                                            size="small"
-                                            danger
-                                            icon={<DeleteOutlined />}
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteTable(name) }}
-                                            style={{ opacity: 0.6, flexShrink: 0 }}
-                                        />
-                                    </Tooltip>
-                                )}
-                            </div>
-                        ))
+                        filtered.map((name) => renderTableItem(name, false))
                     )}
                 </div>
             </div>
