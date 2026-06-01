@@ -28,6 +28,8 @@ interface AppStore {
     setActiveTab: (tab: 'query' | 'scan' | 'items' | 'info') => void
     selectedItem: Record<string, unknown> | null
     setSelectedItem: (item: Record<string, unknown> | null) => void
+    theme: 'light' | 'dark'
+    setTheme: (theme: 'light' | 'dark') => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -52,5 +54,10 @@ export const useAppStore = create<AppStore>((set) => ({
     activeTab: 'query',
     setActiveTab: (activeTab) => set({ activeTab }),
     selectedItem: null,
-    setSelectedItem: (selectedItem) => set({ selectedItem })
+    setSelectedItem: (selectedItem) => set({ selectedItem }),
+    theme: (localStorage.getItem('theme') as 'light' | 'dark') || 'dark',
+    setTheme: (theme) => {
+        localStorage.setItem('theme', theme)
+        set({ theme })
+    }
 }))

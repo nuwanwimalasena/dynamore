@@ -55,6 +55,15 @@ export default function ScanBuilder({ table }: Props) {
     const [indexName, setIndexName] = useState<string | undefined>(undefined)
     const [limit, setLimit] = useState<number | null>(50)
     const [filters, setFilters] = useState<FilterRow[]>([])
+    const [selectedFields, setSelectedFields] = useState<string[]>([])
+
+    const knownAttributes = Array.from(
+        new Set([
+            ...(table.KeySchema ?? []).map(k => k.AttributeName),
+            ...(table.AttributeDefinitions ?? []).map(a => a.AttributeName),
+            ...allIndexes.flatMap((idx: any) => (idx.KeySchema ?? []).map((k: any) => k.AttributeName))
+        ])
+    ).filter(Boolean)
 
     const addFilter = () => setFilters(f => [...f, { attr: '', op: '=', val: '' }])
     const removeFilter = (i: number) => setFilters(f => f.filter((_, j) => j !== i))
@@ -69,15 +78,28 @@ export default function ScanBuilder({ table }: Props) {
         const attrValues: Record<string, unknown> = {}
         const filterExpr = buildFilter(filters, attrNames, attrValues)
 
-        const res = await window.api.query.scan({
+        let projectionExpr: string | undefined = undefined
+        if (selectedFields && selectedFields.length > 0) {
+            const projParts = selectedFields.map((field, idx) => {
+                const key = `#p_attr${idx}`
+                attrNames[key] = field
+                return key
+            })
+            projectionExpr = projParts.join(', ')
+        }
+
+        const params: any = {
             tableName: selectedTable,
             indexName,
-            filterExpression: filterExpr || undefined,
-            expressionAttributeNames: Object.keys(attrNames).length ? attrNames : undefined,
-            expressionAttributeValues: Object.keys(attrValues).length ? attrValues : undefined,
             limit: limit ?? undefined,
             exclusiveStartKey: loadMore ? lastEvaluatedKey : undefined
-        })
+        }
+        if (filterExpr) params.filterExpression = filterExpr
+        if (projectionExpr) params.projectionExpression = projectionExpr
+        if (Object.keys(attrNames).length > 0) params.expressionAttributeNames = attrNames
+        if (Object.keys(attrValues).length > 0) params.expressionAttributeValues = attrValues
+
+        const res = await window.api.query.scan(params)
 
         setLoading(false)
         if (res.success) {
@@ -88,7 +110,7 @@ export default function ScanBuilder({ table }: Props) {
         } else {
             message.error(res.error ?? 'Scan failed')
         }
-    }, [selectedTable, indexName, filters, limit, lastEvaluatedKey, setScanResults, appendScanResults, message])
+    }, [selectedTable, indexName, filters, limit, lastEvaluatedKey, setScanResults, appendScanResults, message, selectedFields])
 
     const exportResults = () => {
         const { scanResults } = useAppStore.getState()
@@ -122,6 +144,24 @@ export default function ScanBuilder({ table }: Props) {
                 )}
                 <Form.Item label={<Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>Limit</Text>} style={{ margin: 0 }}>
                     <InputNumber min={1} max={1000} value={limit} onChange={setLimit} size="small" style={{ width: 80 }} />
+                </Form.Item>
+
+                {/* Fields */}
+                <Form.Item label={<Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>Fields</Text>} style={{ margin: 0 }}>
+                    <Select
+                        mode="tags"
+                        placeholder="All attributes"
+                        value={selectedFields}
+                        onChange={setSelectedFields}
+                        style={{ minWidth: 200, maxWidth: 350 }}
+                        size="small"
+                        allowClear
+                        maxTagCount="responsive"
+                    >
+                        {knownAttributes.map(attr => (
+                            <Option key={attr} value={attr}>{attr}</Option>
+                        ))}
+                    </Select>
                 </Form.Item>
             </Space>
 

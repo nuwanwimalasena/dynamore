@@ -197,14 +197,19 @@ export default function TableDetailPage() {
                     activeKey={activeTab}
                     onChange={v => setActiveTab(v as typeof activeTab)}
                     size="small"
+                    tabBarGutter={16}
                     style={{ flex: 'none' }}
-                    tabBarStyle={{
-                        margin: 0,
-                        paddingLeft: 16,
-                        paddingRight: 16,
-                        borderBottom: '1px solid var(--color-border)'
-                    }}
-                    renderTabBar={(props, DefaultTabBar) => <DefaultTabBar {...props} style={{ marginBottom: 0 }} />}
+                    renderTabBar={(props, DefaultTabBar) => (
+                        <DefaultTabBar
+                            {...props}
+                            style={{
+                                marginBottom: 0,
+                                paddingLeft: 20,
+                                paddingRight: 20,
+                                borderBottom: '1px solid var(--color-border)'
+                            }}
+                        />
+                    )}
                     items={[
                         {
                             key: 'query',

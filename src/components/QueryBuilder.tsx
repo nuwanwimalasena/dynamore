@@ -63,6 +63,7 @@ export default function QueryBuilder({ table }: Props) {
     const [sortAsc, setSortAsc] = useState(true)
     const [limit, setLimit] = useState<number | null>(50)
     const [filters, setFilters] = useState<FilterRow[]>([])
+    const [selectedFields, setSelectedFields] = useState<string[]>([])
 
     // Determine key schema from selected index or table
     const activeSchema = indexName
@@ -70,6 +71,14 @@ export default function QueryBuilder({ table }: Props) {
         : (table.KeySchema ?? [])
     const pkAttr = activeSchema.find(k => k.KeyType === 'HASH')?.AttributeName ?? ''
     const skAttr = activeSchema.find(k => k.KeyType === 'RANGE')?.AttributeName ?? ''
+
+    const knownAttributes = Array.from(
+        new Set([
+            ...(table.KeySchema ?? []).map(k => k.AttributeName),
+            ...(table.AttributeDefinitions ?? []).map(a => a.AttributeName),
+            ...allIndexes.flatMap((idx: any) => (idx.KeySchema ?? []).map((k: any) => k.AttributeName))
+        ])
+    ).filter(Boolean)
 
     const addFilter = () => setFilters(f => [...f, { attr: '', op: '=', val: '' }])
     const removeFilter = (i: number) => setFilters(f => f.filter((_, j) => j !== i))
@@ -101,17 +110,30 @@ export default function QueryBuilder({ table }: Props) {
 
         const filterExpr = buildExpression(filters, attrNames, attrValues, 'f')
 
-        const res = await window.api.query.query({
+        let projectionExpr: string | undefined = undefined
+        if (selectedFields && selectedFields.length > 0) {
+            const projParts = selectedFields.map((field, idx) => {
+                const key = `#p_attr${idx}`
+                attrNames[key] = field
+                return key
+            })
+            projectionExpr = projParts.join(', ')
+        }
+
+        const params: any = {
             tableName: selectedTable,
             indexName,
             keyConditionExpression: kce,
-            filterExpression: filterExpr || undefined,
-            expressionAttributeNames: Object.keys(attrNames).length ? attrNames : undefined,
-            expressionAttributeValues: Object.keys(attrValues).length ? attrValues : undefined,
             limit: limit ?? undefined,
             exclusiveStartKey: loadMore ? lastEvaluatedKey : undefined,
             scanIndexForward: sortAsc
-        })
+        }
+        if (filterExpr) params.filterExpression = filterExpr
+        if (projectionExpr) params.projectionExpression = projectionExpr
+        if (Object.keys(attrNames).length > 0) params.expressionAttributeNames = attrNames
+        if (Object.keys(attrValues).length > 0) params.expressionAttributeValues = attrValues
+
+        const res = await window.api.query.query(params)
 
         setLoading(false)
         if (res.success) {
@@ -122,7 +144,7 @@ export default function QueryBuilder({ table }: Props) {
         } else {
             message.error(res.error ?? 'Query failed')
         }
-    }, [selectedTable, pkVal, pkAttr, skAttr, skVal, skOp, skVal2, filters, limit, sortAsc, indexName, lastEvaluatedKey, setQueryResults, appendQueryResults, message])
+    }, [selectedTable, pkVal, pkAttr, skAttr, skVal, skOp, skVal2, filters, limit, sortAsc, indexName, lastEvaluatedKey, setQueryResults, appendQueryResults, message, selectedFields])
 
     const exportResults = () => {
         const { queryResults } = useAppStore.getState()
@@ -175,6 +197,24 @@ export default function QueryBuilder({ table }: Props) {
                         style={{ width: 80 }}
                         placeholder="50"
                     />
+                </Form.Item>
+
+                {/* Fields */}
+                <Form.Item label={<Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>Fields</Text>} style={{ margin: 0 }}>
+                    <Select
+                        mode="tags"
+                        placeholder="All attributes"
+                        value={selectedFields}
+                        onChange={setSelectedFields}
+                        style={{ minWidth: 200, maxWidth: 350 }}
+                        size="small"
+                        allowClear
+                        maxTagCount="responsive"
+                    >
+                        {knownAttributes.map(attr => (
+                            <Option key={attr} value={attr}>{attr}</Option>
+                        ))}
+                    </Select>
                 </Form.Item>
             </Space>
 
