@@ -21,6 +21,7 @@ export interface QueryParams {
     indexName?: string
     keyConditionExpression: string
     filterExpression?: string
+    projectionExpression?: string
     expressionAttributeNames?: Record<string, string>
     expressionAttributeValues?: Record<string, unknown>
     limit?: number
@@ -32,6 +33,7 @@ export interface ScanParams {
     tableName: string
     indexName?: string
     filterExpression?: string
+    projectionExpression?: string
     expressionAttributeNames?: Record<string, string>
     expressionAttributeValues?: Record<string, unknown>
     limit?: number
@@ -42,17 +44,26 @@ export function registerQueryHandlers(ipcMain: IpcMain): void {
     ipcMain.handle('query:query', async (_, params: QueryParams) => {
         try {
             const docClient = getDocClient()
-            const res = await docClient.send(new QueryCommand({
+            
+            const input: any = {
                 TableName: params.tableName,
-                IndexName: params.indexName,
                 KeyConditionExpression: params.keyConditionExpression,
-                FilterExpression: params.filterExpression,
-                ExpressionAttributeNames: params.expressionAttributeNames,
-                ExpressionAttributeValues: params.expressionAttributeValues,
-                Limit: params.limit,
-                ExclusiveStartKey: params.exclusiveStartKey,
-                ScanIndexForward: params.scanIndexForward ?? true
-            }))
+            }
+            
+            if (params.indexName) input.IndexName = params.indexName
+            if (params.filterExpression) input.FilterExpression = params.filterExpression
+            if (params.projectionExpression) input.ProjectionExpression = params.projectionExpression
+            if (params.expressionAttributeNames && Object.keys(params.expressionAttributeNames).length > 0) {
+                input.ExpressionAttributeNames = params.expressionAttributeNames
+            }
+            if (params.expressionAttributeValues && Object.keys(params.expressionAttributeValues).length > 0) {
+                input.ExpressionAttributeValues = params.expressionAttributeValues
+            }
+            if (params.limit !== undefined && params.limit !== null) input.Limit = params.limit
+            if (params.exclusiveStartKey) input.ExclusiveStartKey = params.exclusiveStartKey
+            if (params.scanIndexForward !== undefined) input.ScanIndexForward = params.scanIndexForward
+
+            const res = await docClient.send(new QueryCommand(input))
             return {
                 success: true,
                 items: res.Items ?? [],
@@ -69,15 +80,24 @@ export function registerQueryHandlers(ipcMain: IpcMain): void {
     ipcMain.handle('query:scan', async (_, params: ScanParams) => {
         try {
             const docClient = getDocClient()
-            const res = await docClient.send(new ScanCommand({
+            
+            const input: any = {
                 TableName: params.tableName,
-                IndexName: params.indexName,
-                FilterExpression: params.filterExpression,
-                ExpressionAttributeNames: params.expressionAttributeNames,
-                ExpressionAttributeValues: params.expressionAttributeValues,
-                Limit: params.limit,
-                ExclusiveStartKey: params.exclusiveStartKey
-            }))
+            }
+            
+            if (params.indexName) input.IndexName = params.indexName
+            if (params.filterExpression) input.FilterExpression = params.filterExpression
+            if (params.projectionExpression) input.ProjectionExpression = params.projectionExpression
+            if (params.expressionAttributeNames && Object.keys(params.expressionAttributeNames).length > 0) {
+                input.ExpressionAttributeNames = params.expressionAttributeNames
+            }
+            if (params.expressionAttributeValues && Object.keys(params.expressionAttributeValues).length > 0) {
+                input.ExpressionAttributeValues = params.expressionAttributeValues
+            }
+            if (params.limit !== undefined && params.limit !== null) input.Limit = params.limit
+            if (params.exclusiveStartKey) input.ExclusiveStartKey = params.exclusiveStartKey
+
+            const res = await docClient.send(new ScanCommand(input))
             return {
                 success: true,
                 items: res.Items ?? [],
