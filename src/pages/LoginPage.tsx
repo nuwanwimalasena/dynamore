@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Typography, Steps, Alert, List, Select, Tooltip } from 'antd'
-import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutlined, RightOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Typography, Steps, Alert, List, Select, Tooltip, Segmented } from 'antd'
+import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutlined, RightOutlined, SunOutlined, MoonOutlined, KeyOutlined } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
 import type { AWSAccount, AWSRole } from '../types/global'
 
@@ -47,6 +47,7 @@ export default function LoginPage() {
     const [form] = Form.useForm<LoginFormValues>()
     const { setSession, theme, setTheme } = useAppStore()
     const [step, setStep] = useState<LoginStep>('config')
+    const [authType, setAuthType] = useState<'sso' | 'keys'>('sso')
     const [statusMsg, setStatusMsg] = useState('')
     const [errorMsg, setErrorMsg] = useState('')
     const [loading, setLoading] = useState(false)
@@ -166,6 +167,24 @@ export default function LoginPage() {
         setAccessToken(''); setAccounts([]); setRoles([]); setSelectedAccount(null)
     }
 
+    const handleLoginWithKeys = async (values: any) => {
+        setLoading(true)
+        setErrorMsg('')
+        try {
+            const res = await window.api.auth.loginWithKeys(values)
+            if (!res.success) throw new Error(res.error ?? 'Login failed')
+            setStep('success')
+            setTimeout(async () => {
+                const session = await window.api.auth.getSession()
+                setSession(session)
+            }, 600)
+        } catch (err) {
+            handleError(err, 'Authentication failed. Please check your keys and region.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const stepIndex = {
         config: 0, authenticating: 1, account: 2, role: 3, completing: 4, success: 4, error: 0
     }[step] ?? 0
@@ -202,11 +221,28 @@ export default function LoginPage() {
                             <AmazonOutlined style={{ fontSize: 30, color: 'var(--color-accent-blue)' }} />
                         </div>
                         <Title level={3} style={{ margin: 0, color: 'var(--color-text-primary)', fontWeight: 700 }}>
-                            {step === 'account' ? 'Select Account' : step === 'role' ? 'Select Role' : 'AWS SSO Sign In'}
+                            {step === 'account' ? 'Select Account' : step === 'role' ? 'Select Role' : (authType === 'sso' ? 'AWS SSO Sign In' : 'Access Keys')}
                         </Title>
                     </div>
 
+                    {/* Auth Toggle */}
+                    {(step === 'config' || step === 'error') && (
+                        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                            <Segmented
+                                options={[
+                                    { label: 'AWS SSO', value: 'sso', icon: <AmazonOutlined /> },
+                                    { label: 'Access Keys', value: 'keys', icon: <KeyOutlined /> }
+                                ]}
+                                value={authType}
+                                onChange={(val) => { setAuthType(val as 'sso' | 'keys'); setErrorMsg(''); setStep('config'); }}
+                                size="large"
+                                block
+                            />
+                        </div>
+                    )}
+
                     {/* Progress Steps */}
+                    {authType === 'sso' && (
                     <Steps
                         size="small"
                         current={stepIndex}
@@ -220,6 +256,7 @@ export default function LoginPage() {
                             { title: 'Done', icon: step === 'success' ? <CheckCircleOutlined /> : undefined }
                         ]}
                     />
+                    )}
 
                     {/* Error Alert */}
                     {step === 'error' && (
@@ -234,7 +271,7 @@ export default function LoginPage() {
                     )}
 
                     {/* ─── STEP: Config Form ─── */}
-                    {(step === 'config' || step === 'error') && (
+                    {(step === 'config' || step === 'error') && authType === 'sso' && (
                         <Form
                             form={form}
                             layout="vertical"
@@ -289,6 +326,41 @@ export default function LoginPage() {
                             </Button>
                             <Button type="text" block onClick={handleReset} style={{ color: 'var(--color-text-tertiary)', marginTop: 8 }}>
                                 Reset
+                            </Button>
+                        </Form>
+                    )}
+
+                    {(step === 'config' || step === 'error') && authType === 'keys' && (
+                        <Form
+                            layout="vertical"
+                            onFinish={handleLoginWithKeys}
+                            initialValues={{ region: 'us-east-1' }}
+                            requiredMark={false}
+                            size="large"
+                        >
+                            <Form.Item label="Access Key ID" name="accessKeyId" rules={[{ required: true, message: 'Required' }]}>
+                                <Input spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                            </Form.Item>
+                            <Form.Item label="Secret Access Key" name="secretAccessKey" rules={[{ required: true, message: 'Required' }]}>
+                                <Input.Password spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                            </Form.Item>
+                            <Form.Item label="Session Token (Optional)" name="sessionToken">
+                                <Input.Password spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                            </Form.Item>
+                            <Form.Item label="AWS Region" name="region" rules={[{ required: true }]}>
+                                <Select
+                                    showSearch
+                                    placeholder="Select a region"
+                                    optionFilterProp="label"
+                                    options={AWS_REGIONS}
+                                    filterOption={(input, option) =>
+                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                                        (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                                    }
+                                />
+                            </Form.Item>
+                            <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 52, borderRadius: 14, fontWeight: 600, marginTop: 8, fontSize: 15 }} icon={<ArrowRightOutlined />} iconPosition="end">
+                                Sign In
                             </Button>
                         </Form>
                     )}

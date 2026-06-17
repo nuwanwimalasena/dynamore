@@ -1,21 +1,23 @@
 import { IpcMain, shell, WebContents } from 'electron'
 import { SSOOIDCClient, RegisterClientCommand, StartDeviceAuthorizationCommand, CreateTokenCommand } from '@aws-sdk/client-sso-oidc'
 import { SSOClient, GetRoleCredentialsCommand, ListAccountsCommand, ListAccountRolesCommand } from '@aws-sdk/client-sso'
+import { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts'
 import Store from 'electron-store'
 
 interface SessionData {
-    accessToken: string
-    accessTokenExpiry: number
+    authType: 'sso' | 'keys'
+    accessToken?: string
+    accessTokenExpiry?: number
     credentials: {
         accessKeyId: string
         secretAccessKey: string
-        sessionToken: string
-        expiration: number
+        sessionToken?: string
+        expiration?: number
     }
-    startUrl: string
+    startUrl?: string
     region: string
-    accountId: string
-    roleName: string
+    accountId?: string
+    roleName?: string
 }
 
 const store = new Store<{ session: SessionData | null }>({ name: 'dynamore-auth' })
@@ -27,8 +29,10 @@ let currentSession: SessionData | null = store.get('session', null)
 
 export function getCredentials() {
     if (!currentSession) throw new Error('Not authenticated')
-    if (Date.now() > currentSession.credentials.expiration - 60_000) {
-        throw new Error('Credentials expired – please log in again')
+    if (currentSession.authType === 'sso' && currentSession.credentials.expiration) {
+        if (Date.now() > currentSession.credentials.expiration - 60_000) {
+            throw new Error('Credentials expired – please log in again')
+        }
     }
     return {
         accessKeyId: currentSession.credentials.accessKeyId,
@@ -139,6 +143,7 @@ export function registerAuthHandlers(ipcMain: IpcMain): void {
 
         const c = credRes.roleCredentials!
         currentSession = {
+            authType: 'sso',
             accessToken,
             accessTokenExpiry: Date.now() + 8 * 3600_000,
             credentials: {
@@ -166,15 +171,39 @@ export function registerAuthHandlers(ipcMain: IpcMain): void {
 
     ipcMain.handle('auth:getSession', () => {
         if (!currentSession) return null
-        if (Date.now() > currentSession.credentials.expiration - 60_000) {
-            currentSession = null
-            store.delete('session')
-            return null
+        if (currentSession.authType === 'sso' && currentSession.credentials.expiration) {
+            if (Date.now() > currentSession.credentials.expiration - 60_000) {
+                currentSession = null
+                store.delete('session')
+                return null
+            }
         }
         return {
+            authType: currentSession.authType,
             accountId: currentSession.accountId,
             roleName: currentSession.roleName,
             region: currentSession.region
+        }
+    })
+
+    ipcMain.handle('auth:loginWithKeys', async (_event, { accessKeyId, secretAccessKey, sessionToken, region }) => {
+        try {
+            const sts = new STSClient({
+                region,
+                credentials: { accessKeyId, secretAccessKey, sessionToken }
+            })
+            await sts.send(new GetCallerIdentityCommand({}))
+            
+            currentSession = {
+                authType: 'keys',
+                region,
+                credentials: { accessKeyId, secretAccessKey, sessionToken }
+            }
+            store.set('session', currentSession)
+            return { success: true, region }
+        } catch (error: unknown) {
+            const err = error as Error
+            return { success: false, error: err.message || 'Invalid credentials' }
         }
     })
 

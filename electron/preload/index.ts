@@ -15,6 +15,8 @@ const api = {
             ipcRenderer.invoke('auth:listSSOAccountRoles', params),
         completeSSOLogin: (params: { accessToken: string; region: string; accountId: string; roleName: string; startUrl: string }) =>
             ipcRenderer.invoke('auth:completeSSOLogin', params),
+        loginWithKeys: (params: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; region: string }) =>
+            ipcRenderer.invoke('auth:loginWithKeys', params),
         logout: () => ipcRenderer.invoke('auth:logout'),
         getSession: () => ipcRenderer.invoke('auth:getSession'),
         getLastSSOConfig: () => ipcRenderer.invoke('auth:getLastSSOConfig'),

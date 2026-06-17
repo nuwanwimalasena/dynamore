@@ -50,6 +50,7 @@
     "@aws-sdk/client-dynamodb": "^3.609.0",
     "@aws-sdk/client-sso": "^3.609.0",
     "@aws-sdk/client-sso-oidc": "^3.609.0",
+    "@aws-sdk/client-sts": "^3.1068.0",
     "@aws-sdk/credential-providers": "^3.609.0",
     "@aws-sdk/lib-dynamodb": "^3.609.0",
     "@electron-toolkit/preload": "^3.0.1",
@@ -89,7 +90,8 @@
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "snap"
       ],
       "icon": "resources/icon.png"
     }

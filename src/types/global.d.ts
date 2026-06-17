@@ -1,9 +1,10 @@
 // Type declarations for the IPC API exposed via contextBridge
 
 export interface Session {
-    accountId: string
-    roleName: string
+    accountId?: string
+    roleName?: string
     region: string
+    authType: 'sso' | 'keys'
 }
 
 export interface AWSAccount {
@@ -72,6 +73,12 @@ declare global {
                     roleName: string
                     startUrl: string
                 }) => Promise<{ success: boolean; error?: string; accountId?: string; roleName?: string; region?: string }>
+                loginWithKeys: (params: {
+                    accessKeyId: string
+                    secretAccessKey: string
+                    sessionToken?: string
+                    region: string
+                }) => Promise<{ success: boolean; error?: string; region: string }>
                 logout: () => Promise<{ success: boolean }>
                 getSession: () => Promise<Session | null>
                 getLastSSOConfig: () => Promise<{ startUrl: string; region: string; accountId: string; roleName: string } | null>
