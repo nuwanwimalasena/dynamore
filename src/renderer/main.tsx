@@ -1,3 +1,4 @@
+import '@/api'
 import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { ConfigProvider, App as AntApp } from 'antd'
