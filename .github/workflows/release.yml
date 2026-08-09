@@ -56,8 +56,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
-          releaseName: 'Dynamore ${{ github.ref_type == "tag" && github.ref_name || "v__VERSION__" }}'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Dynamore ${{ github.ref_name }}'
           releaseBody: 'See the assets below to download Dynamore for your platform.'
           releaseDraft: true
           prerelease: false
