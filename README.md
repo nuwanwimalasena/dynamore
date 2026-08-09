@@ -1,27 +1,28 @@
-# ⚡ Dynamore
+# ⚡ Dynamore v2
 
 ### A sleek, high-performance DynamoDB desktop client for power users.
 
-![Dynamore Mockup](resources/mockup.png)
+![Dynamore Logo](resources/logo.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Powered by React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
-[![Built with Electron](https://img.shields.io/badge/Electron-31-blue.svg)](https://www.electronjs.org/)
+[![Built with Tauri v2](https://img.shields.io/badge/Tauri-v2-blue.svg)](https://tauri.app/)
+[![Powered by Rust](https://img.shields.io/badge/Rust-1.77+-orange.svg)](https://www.rust-lang.org/)
 [![AWS SDK](https://img.shields.io/badge/AWS-SDK-orange.svg)](https://aws.amazon.com/sdk-for-javascript/)
 
-Dynamore is a modern, cross-platform desktop application designed to make managing AWS DynamoDB tables and data effortless. Built with performance and user experience in mind, it provides a powerful interface for developers to interact with their NoSQL data.
+Dynamore is a modern, cross-platform desktop application designed to make managing AWS DynamoDB tables and data effortless. Built with **Tauri v2**, **Rust**, **React 18**, and **Vite**, it delivers exceptional performance, minimal memory footprint, and a responsive experience.
 
 ---
 
 ## ✨ Key Features
 
 - **🔐 AWS SSO Integration**: Securely connect using your AWS Identity Center profiles.
-- **🏗️ Table Management**: Create and delete tables with an intuitive wizard.
+- **🏗️ Table Management**: Create, inspect, and delete tables with an intuitive wizard.
 - **🔍 Advanced Querying**: Build complex queries with a dedicated Query Builder.
-- **📊 Scan Capability**: Flexible scan operations with filtering.
+- **📊 Scan Capability**: Flexible scan operations with real-time filtering.
 - **📝 JSON Item Editor**: Edit DynamoDB items directly in a streamlined JSON editor.
-- **🎨 Modern UI**: Beautiful, dark-themed interface built with Ant Design and custom glassmorphism effects.
-- **⚡ Blazing Fast**: Optimized with Electron and Vite for a responsive experience.
+- **🎨 Modern UI**: Beautiful dark-themed interface built with Ant Design and custom glassmorphism effects.
+- **⚡ Blazing Fast**: Powered by Tauri v2 and Rust native backend for minimal memory footprint and fast startup times.
 
 ---
 
@@ -31,6 +32,7 @@ Dynamore is a modern, cross-platform desktop application designed to make managi
 
 - [Node.js](https://nodejs.org/) (v20 or higher)
 - [npm](https://www.npmjs.com/)
+- [Rust](https://www.rust-lang.org/tools/install) (stable toolchain)
 
 ### Installation
 
@@ -40,69 +42,60 @@ Dynamore is a modern, cross-platform desktop application designed to make managi
    cd dynamore
    ```
 
-2. Install dependencies:
+2. Install frontend dependencies:
    ```bash
    npm install
    ```
 
 ### Running in Development
 
+#### Web Server (Vite)
+To run the web development server:
 ```bash
 npm run dev
+```
+Access the application at `http://localhost:5173`.
+
+#### Native Tauri Desktop App
+To run the desktop application natively with Rust live-reload:
+```bash
+npm run tauri dev
 ```
 
 ### Building for Production
 
+To build the frontend assets:
 ```bash
 npm run build
 ```
 
-### Packaging the Application
-
-To create a standalone installer for your current OS:
-
+To compile and package the native desktop application for your platform:
 ```bash
-npm run package
+npm run tauri build
 ```
-
-The installers will be available in the `dist/` directory.
-
-### Publishing Releases (Automated)
-
-This project is configured with GitHub Actions to automatically build and publish releases. To trigger a release:
-
-1. Update the version in `package.json`.
-2. Push a new tag:
-   ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
-   ```
-
-The workflow in `.github/workflows/release.yml` will handle the rest.
 
 ---
 
 ## 🛠️ Built With
 
-- **[Electron](https://www.electronjs.org/)**: Desktop application framework.
-- **[electron-builder](https://www.electron.build/)**: Complete solution to package and dev Electron apps.
+- **[Tauri v2](https://tauri.app/)**: Next-generation light-weight desktop framework.
+- **[Rust](https://www.rust-lang.org/)**: Native backend performance and security.
 - **[Vite](https://vitejs.dev/)**: Next-generation frontend tooling.
-- **[React](https://reactjs.org/)**: UI library.
-- **[Ant Design](https://ant.design/)**: Enterprise-class UI design language.
-- **[Zustand](https://github.com/pmndrs/zustand)**: Light-weight state management.
+- **[React 18](https://reactjs.org/)**: Modern UI library.
+- **[Ant Design](https://ant.design/)**: Enterprise-class UI design system.
+- **[Zustand](https://github.com/pmndrs/zustand)**: Lightweight state management.
 - **[AWS SDK for JavaScript v3](https://aws.amazon.com/sdk-for-javascript/)**: Modular AWS integration.
 
 ---
 
-## 🤝 Contributing
+## 🚀 Automated Release Pipeline
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project uses **GitHub Actions** (`.github/workflows/release.yml`) to automatically build native installers (Linux AppImage/DEB, macOS DMG/AppBundle, Windows NSIS/MSI) upon pushing a version tag:
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+```bash
+git tag v2.0.1
+git push origin dev-tauri --tags
+```
 
 ---
 

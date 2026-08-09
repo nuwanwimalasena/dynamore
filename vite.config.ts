@@ -6,6 +6,10 @@ import { resolve } from 'path'
 export default defineConfig({
   root: resolve('src/renderer'),
   plugins: [react()],
+  build: {
+    outDir: resolve(__dirname, 'dist'),
+    emptyOutDir: true
+  },
   resolve: {
     alias: {
       '@': resolve('src'),
