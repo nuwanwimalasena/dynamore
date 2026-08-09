@@ -1,18 +1,13 @@
 {
   "name": "dynamore",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "description": "A DynamoDB desktop client",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "ELECTRON_DISABLE_SANDBOX=1 electron-vite dev",
-    "build": "electron-vite build",
-    "preview": "electron-vite preview",
-    "electron:dev": "electron-vite dev",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "package": "electron-vite build && electron-builder",
-    "publish": "electron-vite build && electron-builder --publish always"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
   },
   "keywords": [
     "dynamodb",
@@ -30,15 +25,14 @@
     "url": "https://github.com/nuwanwimalasena/dynamore.git"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.13.1",
     "@typescript-eslint/parser": "^7.13.1",
     "@vitejs/plugin-react": "^4.3.1",
-    "electron": "^31.0.2",
-    "electron-builder": "^26.8.1",
-    "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "typescript": "^5.4.5",
@@ -47,52 +41,14 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.7",
-    "@aws-sdk/client-dynamodb": "^3.609.0",
-    "@aws-sdk/client-sso": "^3.609.0",
-    "@aws-sdk/client-sso-oidc": "^3.609.0",
-    "@aws-sdk/credential-providers": "^3.609.0",
-    "@aws-sdk/lib-dynamodb": "^3.609.0",
-    "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/utils": "^3.0.0",
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-shell": "~2",
+    "@tauri-apps/plugin-store": "~2",
+    "@tauri-apps/plugin-updater": "~2",
     "antd": "^5.18.3",
-    "approve-builds": "^1.0.0",
-    "electron-store": "^8.1.0",
-    "electron-updater": "^6.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.24.0",
     "zustand": "^4.5.4"
-  },
-  "build": {
-    "appId": "com.dynamore.app",
-    "productName": "Dynamore",
-    "publish": [
-      "github"
-    ],
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "out/**/*",
-      "resources/icon.png"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "resources/icon.ico"
-    },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "icon": "resources/icon.png"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "icon": "resources/icon.png"
-    }
   }
 }
