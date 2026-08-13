@@ -1,6 +1,6 @@
 [package]
 name = "dynamore"
-version = "2.1.0"
+version = "2.1.1"
 description = "A sleek, high-performance DynamoDB desktop client"
 authors = ["Nuwan Wimalasena <nuwan@example.com>"]
 license = "MIT"
