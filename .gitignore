@@ -78,3 +78,7 @@ out
 # Gemini / Antigravity data
 .gemini/
 brain/
+
+# AI-DLC
+.aidlc/
+
