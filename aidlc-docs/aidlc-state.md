@@ -4,15 +4,16 @@
 - **Project Name**: Dynamore
 - **Description**: A DynamoDB desktop client application built with React 18, Vite, Ant Design, Zustand, and Tauri 2.
 - **Repository Type**: Brownfield (existing codebase)
-- **Active Task**: Match Application Color Theme with App Icon Colors
+- **Active Task**: Debug & Implement Browser Mode Web Mock Handling for Login & Operations
 - **Initialization Timestamp**: 2026-08-13T19:15:00+05:30
 - **AI-DLC Rules Version**: 2.0 (GA)
 
 ---
 
-## Active Phase: Inception Phase (Ready for Next Task)
-**Status**: IDLE / COMPLETED
-**Last Task Completed**: Match Application Color Theme with App Icon Colors
+## Active Phase: Construction Phase
+**Status**: COMPLETED
+**Last Task Completed**: Browser Mode Web Mock Handler & Login Sanitization Fixes
+
 
 ---
 

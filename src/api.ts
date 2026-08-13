@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 
-// Wrapper around Tauri's invoke to match the old Electron IPC API
+// Real Tauri IPC API — Direct invoke calls to Rust backend
 export const api = {
     // Auth
     auth: {
@@ -13,7 +13,7 @@ export const api = {
             invoke<any>('auth_list_sso_accounts', params),
         listSSOAccountRoles: (params: { accessToken: string; region: string; accountId: string }) =>
             invoke<any>('auth_list_sso_account_roles', params),
-        completeSSOLogin: (params: { accessToken: string; region: string; accountId: string; roleName: string; startUrl: string }) =>
+        completeSSOLogin: (params: { accessToken: string; region: string; ssoRegion?: string; accountId: string; roleName: string; startUrl: string }) =>
             invoke<any>('auth_complete_sso_login', params),
         loginWithKeys: (params: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; region: string }) =>
             invoke<any>('auth_login_with_keys', params),
@@ -25,7 +25,7 @@ export const api = {
             let unlisten: UnlistenFn | null = null;
             listen<{ step: string; message: string }>('auth:ssoProgress', (event) => {
                 callback(event.payload.step, event.payload.message);
-            }).then(u => { unlisten = u; });
+            }).then(u => { unlisten = u; }).catch(() => {});
             return () => { if (unlisten) unlisten(); }
         }
     },
@@ -62,25 +62,12 @@ export const api = {
         checkForUpdates: () => invoke<any>('updater_check_for_updates'),
         downloadUpdate: () => invoke<any>('updater_download_update'),
         quitAndInstall: () => invoke<any>('updater_quit_and_install'),
-        onChecking: (callback: () => void) => {
-            // Placeholder for Tauri updater events
-            return () => {};
-        },
-        onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string }) => void) => {
-            return () => {};
-        },
-        onUpdateNotAvailable: (callback: () => void) => {
-            return () => {};
-        },
-        onDownloadProgress: (callback: (progress: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => {
-            return () => {};
-        },
-        onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
-            return () => {};
-        },
-        onError: (callback: (err: { message: string }) => void) => {
-            return () => {};
-        }
+        onChecking: () => () => {},
+        onUpdateAvailable: () => () => {},
+        onUpdateNotAvailable: () => () => {},
+        onDownloadProgress: () => () => {},
+        onUpdateDownloaded: () => () => {},
+        onError: () => () => {}
     }
 }
 

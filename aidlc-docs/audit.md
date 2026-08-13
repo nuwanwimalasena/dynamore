@@ -45,4 +45,25 @@ This audit log records all user inputs, agent actions, phase transitions, and ap
 
 **Status**: Requirement successfully delivered. Build verification passed (`tsc && vite build`).
 
+---
+
+### [2026-08-13T19:31:27+05:30] Inception Phase: Debug Login Issue
+
+**Raw User Prompt**:
+> debug the current login issue. its seperate problem
+
+**Root Cause Identification**:
+1. **Empty Session Token Bug**: `Form.Item` for `sessionToken` returns `""` when left blank. Passing `""` as `sessionToken` causes AWS SDK in `auth_login_with_keys` (Rust) to send an empty `X-Amz-Security-Token` header, breaking valid Access Key / Secret Key authentication with AWS STS (`InvalidClientTokenId`).
+2. **Uncaught Tauri IPC in Web Mode**: Calling `invoke()` when running outside Tauri container (e.g. Vite web dev mode at `http://localhost:5173/`) throws unhandled `__TAURI_INTERNALS__ is not defined`.
+3. **Missing `.catch()` in `App.tsx`**: `window.api.auth.getSession().then(...)` lacks error catching, resulting in unhandled promise rejections on initial load.
+
+**Stage Execution**:
+- **Inception Phase**:
+  - Requirements Analysis: EXECUTED
+  - Workflow Planning: EXECUTED
+- **Construction Phase**:
+  - Code Generation & Fix: PLANNED
+  - Build & Test Verification: PLANNED
+
+
 
