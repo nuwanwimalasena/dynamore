@@ -55,6 +55,7 @@ export default function LoginPage() {
     const [accessToken, setAccessToken] = useState('')
     const [startUrlRef, setStartUrlRef] = useState('')
     const [regionRef, setRegionRef] = useState('')
+    const [ssoRegionRef, setSsoRegionRef] = useState('')
     const [accounts, setAccounts] = useState<AWSAccount[]>([])
     const [roles, setRoles] = useState<AWSRole[]>([])
     const [selectedAccount, setSelectedAccount] = useState<AWSAccount | null>(null)
@@ -68,7 +69,7 @@ export default function LoginPage() {
                     region: config.region || 'us-east-1'
                 })
             }
-        })
+        }).catch(() => {})
 
         const unsub = window.api.auth.onSSOProgress((_progressStep, message) => {
             setStatusMsg(message)
@@ -78,7 +79,14 @@ export default function LoginPage() {
     }, [form])
 
     const handleError = (err: unknown, fallback = 'An error occurred') => {
-        const msg = err instanceof Error ? err.message : fallback
+        let msg = fallback
+        if (typeof err === 'string' && err.trim().length > 0) {
+            msg = err
+        } else if (err instanceof Error && err.message) {
+            msg = err.message
+        } else if (err && typeof err === 'object') {
+            msg = (err as any).message || (err as any).error || (err as any).toString() || JSON.stringify(err)
+        }
         setErrorMsg(msg)
         setStep('error')
         setLoading(false)
@@ -92,12 +100,14 @@ export default function LoginPage() {
 
         try {
             const initRes = await window.api.auth.initSSO(values)
+            const effectiveSsoRegion = initRes.region || values.region || 'us-east-1'
+            setSsoRegionRef(effectiveSsoRegion)
             setStartUrlRef(initRes.startUrl ?? values.startUrl)
             setRegionRef(values.region)
             setStatusMsg('Waiting for you to sign in via the browser…')
 
             const { accessToken } = await window.api.auth.pollSSOToken({
-                region: values.region,
+                region: effectiveSsoRegion,
                 clientId: initRes.clientId,
                 clientSecret: initRes.clientSecret,
                 deviceCode: initRes.deviceCode,
@@ -108,7 +118,7 @@ export default function LoginPage() {
             setAccessToken(accessToken)
             setStatusMsg('Fetching your AWS accounts…')
 
-            const { accounts } = await window.api.auth.listSSOAccounts({ accessToken, region: values.region })
+            const { accounts } = await window.api.auth.listSSOAccounts({ accessToken, region: effectiveSsoRegion })
             if (!accounts.length) throw new Error('No AWS accounts found for this user.')
             setAccounts(accounts)
             setStep('account')
@@ -124,7 +134,7 @@ export default function LoginPage() {
         setLoading(true)
         try {
             const { roles } = await window.api.auth.listSSOAccountRoles({
-                accessToken, region: regionRef, accountId: account.accountId
+                accessToken, region: ssoRegionRef || regionRef, accountId: account.accountId
             })
             if (!roles.length) throw new Error('No roles found for this account.')
             setRoles(roles)
@@ -142,9 +152,12 @@ export default function LoginPage() {
         setStatusMsg(`Signing in as ${role.roleName}…`)
         try {
             const res = await window.api.auth.completeSSOLogin({
-                accessToken, region: regionRef,
+                accessToken,
+                region: regionRef,
+                ssoRegion: ssoRegionRef,
                 accountId: selectedAccount!.accountId,
-                roleName: role.roleName, startUrl: startUrlRef
+                roleName: role.roleName,
+                startUrl: startUrlRef
             })
             if (!res.success) throw new Error(res.error ?? 'Login failed')
             setStep('success')
@@ -171,11 +184,15 @@ export default function LoginPage() {
         setLoading(true)
         setErrorMsg('')
         try {
-            const res = await window.api.auth.loginWithKeys(values)
+            const payload = {
+                ...values,
+                sessionToken: values.sessionToken?.trim() || undefined
+            }
+            const res = await window.api.auth.loginWithKeys(payload)
             if (!res.success) throw new Error(res.error ?? 'Login failed')
             setStep('success')
             setTimeout(async () => {
-                const session = await window.api.auth.getSession()
+                const session = await window.api.auth.getSession().catch(() => null)
                 setSession(session)
             }, 600)
         } catch (err) {

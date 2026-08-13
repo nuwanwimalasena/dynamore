@@ -4,22 +4,22 @@ import type { ThemeConfig } from 'antd'
 export const darkTheme: ThemeConfig = {
     algorithm: antdTheme.darkAlgorithm,
     token: {
-        colorPrimary: '#58a6ff',
-        colorBgBase: '#0d1117',
-        colorBgContainer: '#161b22',
-        colorBgElevated: '#1e2631',
-        colorBgLayout: '#0d1117',
-        colorBorder: '#30363d',
-        colorBorderSecondary: '#21262d',
-        colorText: '#e6edf3',
-        colorTextSecondary: '#8b949e',
-        colorTextTertiary: '#484f58',
-        colorTextPlaceholder: '#484f58',
-        colorLink: '#58a6ff',
-        colorSuccess: '#3fb950',
+        colorPrimary: '#00b4d8',
+        colorBgBase: '#0a0f1d',
+        colorBgContainer: '#111927',
+        colorBgElevated: '#1a2332',
+        colorBgLayout: '#0a0f1d',
+        colorBorder: '#1e293b',
+        colorBorderSecondary: '#162032',
+        colorText: '#f1f5f9',
+        colorTextSecondary: '#94a3b8',
+        colorTextTertiary: '#64748b',
+        colorTextPlaceholder: '#64748b',
+        colorLink: '#00b4d8',
+        colorSuccess: '#2dd4bf',
         colorError: '#f85149',
-        colorWarning: '#d29922',
-        colorInfo: '#58a6ff',
+        colorWarning: '#fbbf24',
+        colorInfo: '#00b4d8',
         borderRadius: 6,
         borderRadiusLG: 8,
         borderRadiusSM: 4,
@@ -36,66 +36,66 @@ export const darkTheme: ThemeConfig = {
     },
     components: {
         Layout: {
-            siderBg: '#161b22',
-            bodyBg: '#0d1117',
-            headerBg: '#161b22'
+            siderBg: '#111927',
+            bodyBg: '#0a0f1d',
+            headerBg: '#111927'
         },
         Menu: {
-            darkItemBg: '#161b22',
-            darkSubMenuItemBg: '#0d1117',
-            darkItemSelectedBg: 'rgba(88, 166, 255, 0.1)',
-            darkItemColor: '#8b949e',
-            darkItemHoverColor: '#e6edf3',
-            darkItemSelectedColor: '#58a6ff'
+            darkItemBg: '#111927',
+            darkSubMenuItemBg: '#0a0f1d',
+            darkItemSelectedBg: 'rgba(0, 180, 216, 0.15)',
+            darkItemColor: '#94a3b8',
+            darkItemHoverColor: '#f1f5f9',
+            darkItemSelectedColor: '#00b4d8'
         },
         Table: {
-            headerBg: '#161b22',
-            rowHoverBg: '#1e2631',
-            borderColor: '#30363d',
-            headerColor: '#8b949e',
+            headerBg: '#111927',
+            rowHoverBg: '#1a2332',
+            borderColor: '#1e293b',
+            headerColor: '#94a3b8',
             cellFontSizeMD: 13
         },
         Input: {
-            activeBorderColor: '#58a6ff',
-            hoverBorderColor: '#8b949e'
+            activeBorderColor: '#00b4d8',
+            hoverBorderColor: '#94a3b8'
         },
         Select: {
-            optionSelectedBg: 'rgba(88, 166, 255, 0.12)'
+            optionSelectedBg: 'rgba(0, 180, 216, 0.15)'
         },
         Button: {
             primaryColor: '#ffffff',
-            defaultBg: '#21262d',
-            defaultBorderColor: '#30363d',
-            defaultColor: '#e6edf3'
+            defaultBg: '#162032',
+            defaultBorderColor: '#1e293b',
+            defaultColor: '#f1f5f9'
         },
         Tabs: {
-            itemColor: '#8b949e',
-            itemActiveColor: '#58a6ff',
-            itemSelectedColor: '#58a6ff',
-            inkBarColor: '#58a6ff',
-            cardBg: '#161b22'
+            itemColor: '#94a3b8',
+            itemActiveColor: '#00b4d8',
+            itemSelectedColor: '#00b4d8',
+            inkBarColor: '#00b4d8',
+            cardBg: '#111927'
         },
         Modal: {
-            contentBg: '#1e2631',
-            headerBg: '#1e2631',
-            footerBg: '#1e2631'
+            contentBg: '#1a2332',
+            headerBg: '#1a2332',
+            footerBg: '#1a2332'
         },
         Drawer: {
-            colorBgElevated: '#1e2631'
+            colorBgElevated: '#1a2332'
         },
         Tag: {
-            defaultBg: '#21262d',
-            defaultColor: '#8b949e'
+            defaultBg: '#162032',
+            defaultColor: '#94a3b8'
         },
         Badge: {
-            colorBgContainer: '#21262d'
+            colorBgContainer: '#162032'
         },
         Tooltip: {
-            colorBgSpotlight: '#21262d',
-            colorTextLightSolid: '#e6edf3'
+            colorBgSpotlight: '#162032',
+            colorTextLightSolid: '#f1f5f9'
         },
         Form: {
-            labelColor: '#8b949e'
+            labelColor: '#94a3b8'
         }
     }
 }
@@ -103,22 +103,22 @@ export const darkTheme: ThemeConfig = {
 export const lightTheme: ThemeConfig = {
     algorithm: antdTheme.defaultAlgorithm,
     token: {
-        colorPrimary: '#0969da',
+        colorPrimary: '#0284c7',
         colorBgBase: '#ffffff',
         colorBgContainer: '#ffffff',
         colorBgElevated: '#ffffff',
-        colorBgLayout: '#f6f8fa',
-        colorBorder: '#d0d7de',
-        colorBorderSecondary: '#eaeef2',
-        colorText: '#24292f',
-        colorTextSecondary: '#57606a',
-        colorTextTertiary: '#8c959f',
-        colorTextPlaceholder: '#8c959f',
-        colorLink: '#0969da',
-        colorSuccess: '#1a7f37',
-        colorError: '#cf222e',
-        colorWarning: '#9a6700',
-        colorInfo: '#0969da',
+        colorBgLayout: '#f0f7ff',
+        colorBorder: '#e2e8f0',
+        colorBorderSecondary: '#f1f5f9',
+        colorText: '#0f172a',
+        colorTextSecondary: '#475569',
+        colorTextTertiary: '#94a3b8',
+        colorTextPlaceholder: '#94a3b8',
+        colorLink: '#0284c7',
+        colorSuccess: '#0d9488',
+        colorError: '#e11d48',
+        colorWarning: '#d97706',
+        colorInfo: '#0284c7',
         borderRadius: 6,
         borderRadiusLG: 8,
         borderRadiusSM: 4,
@@ -136,42 +136,42 @@ export const lightTheme: ThemeConfig = {
     components: {
         Layout: {
             siderBg: '#ffffff',
-            bodyBg: '#f6f8fa',
+            bodyBg: '#f0f7ff',
             headerBg: '#ffffff'
         },
         Menu: {
             itemBg: '#ffffff',
-            subMenuItemBg: '#f6f8fa',
-            itemSelectedBg: 'rgba(9, 105, 218, 0.08)',
-            itemColor: '#57606a',
-            itemHoverColor: '#24292f',
-            itemSelectedColor: '#0969da'
+            subMenuItemBg: '#f0f7ff',
+            itemSelectedBg: 'rgba(2, 132, 199, 0.1)',
+            itemColor: '#475569',
+            itemHoverColor: '#0f172a',
+            itemSelectedColor: '#0284c7'
         },
         Table: {
-            headerBg: '#f6f8fa',
-            rowHoverBg: '#eaeef2',
-            borderColor: '#d0d7de',
-            headerColor: '#57606a',
+            headerBg: '#f0f7ff',
+            rowHoverBg: '#e0f2fe',
+            borderColor: '#e2e8f0',
+            headerColor: '#475569',
             cellFontSizeMD: 13
         },
         Input: {
-            activeBorderColor: '#0969da',
-            hoverBorderColor: '#8c959f'
+            activeBorderColor: '#0284c7',
+            hoverBorderColor: '#94a3b8'
         },
         Select: {
-            optionSelectedBg: 'rgba(9, 105, 218, 0.08)'
+            optionSelectedBg: 'rgba(2, 132, 199, 0.1)'
         },
         Button: {
             primaryColor: '#ffffff',
-            defaultBg: '#f6f8fa',
-            defaultBorderColor: '#d0d7de',
-            defaultColor: '#24292f'
+            defaultBg: '#f0f7ff',
+            defaultBorderColor: '#e2e8f0',
+            defaultColor: '#0f172a'
         },
         Tabs: {
-            itemColor: '#57606a',
-            itemActiveColor: '#0969da',
-            itemSelectedColor: '#0969da',
-            inkBarColor: '#0969da',
+            itemColor: '#475569',
+            itemActiveColor: '#0284c7',
+            itemSelectedColor: '#0284c7',
+            inkBarColor: '#0284c7',
             cardBg: '#ffffff'
         },
         Modal: {
@@ -183,18 +183,18 @@ export const lightTheme: ThemeConfig = {
             colorBgElevated: '#ffffff'
         },
         Tag: {
-            defaultBg: '#eaeef2',
-            defaultColor: '#57606a'
+            defaultBg: '#e0f2fe',
+            defaultColor: '#0369a1'
         },
         Badge: {
             colorBgContainer: '#ffffff'
         },
         Tooltip: {
-            colorBgSpotlight: '#24292f',
+            colorBgSpotlight: '#0f172a',
             colorTextLightSolid: '#ffffff'
         },
         Form: {
-            labelColor: '#57606a'
+            labelColor: '#475569'
         }
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "dynamore"
-version = "2.0.0"
+version = "2.1.1"
 description = "A sleek, high-performance DynamoDB desktop client"
 authors = ["Nuwan Wimalasena <nuwan@example.com>"]
 license = "MIT"
@@ -13,6 +13,10 @@ rust-version = "1.77.2"
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[profile.dev]
+debug = 0
+opt-level = 1
 
 [build-dependencies]
 tauri-build = { version = "2.6.2", features = [] }

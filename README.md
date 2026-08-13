@@ -93,8 +93,8 @@ npm run tauri build
 This project uses **GitHub Actions** (`.github/workflows/release.yml`) to automatically build native installers (Linux AppImage/DEB, macOS DMG/AppBundle, Windows NSIS/MSI) upon pushing a version tag:
 
 ```bash
-git tag v2.0.1
-git push origin dev-tauri --tags
+git tag v2.1.0
+git push origin dev --tags
 ```
 
 ---

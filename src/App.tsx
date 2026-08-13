@@ -10,7 +10,9 @@ export default function App() {
 
     useEffect(() => {
         // Check for an existing valid session on startup
-        window.api.auth.getSession().then((s) => setSession(s))
+        window.api.auth.getSession()
+            .then((s) => setSession(s))
+            .catch(() => setSession(null))
     }, [setSession])
 
     return (

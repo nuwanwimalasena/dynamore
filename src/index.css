@@ -1,6 +1,6 @@
 /* ==========================================
    Dynamore – Global CSS
-   Design: Dark mode, Inter font, deep blue-gray palette
+   Design: Logo-Matched Electric Cyan & Deep Navy Slate Palette
    ========================================== */
 
 *, *::before, *::after {
@@ -8,16 +8,17 @@
 }
 
 :root {
-  --color-bg: #0d1117;
-  --color-surface: #161b22;
-  --color-surface-2: #1e2631;
-  --color-border: #30363d;
-  --color-accent: #f78166;
-  --color-accent-blue: #58a6ff;
-  --color-accent-green: #3fb950;
-  --color-text-primary: #e6edf3;
-  --color-text-secondary: #8b949e;
-  --color-text-muted: #484f58;
+  --color-bg: #0a0f1d;
+  --color-surface: #111927;
+  --color-surface-2: #1a2332;
+  --color-border: #1e293b;
+  --color-accent: #00b4d8;
+  --color-accent-blue: #00b4d8;
+  --color-accent-teal: #2dd4bf;
+  --color-accent-green: #2dd4bf;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --radius-sm: 4px;
@@ -28,16 +29,17 @@
 }
 
 :root[data-theme='light'] {
-  --color-bg: #f6f8fa;
+  --color-bg: #f0f7ff;
   --color-surface: #ffffff;
-  --color-surface-2: #eaeef2;
-  --color-border: #d0d7de;
-  --color-accent: #fd6f50;
-  --color-accent-blue: #0969da;
-  --color-accent-green: #1a7f37;
-  --color-text-primary: #24292f;
-  --color-text-secondary: #57606a;
-  --color-text-muted: #8c959f;
+  --color-surface-2: #e0f2fe;
+  --color-border: #e2e8f0;
+  --color-accent: #0284c7;
+  --color-accent-blue: #0284c7;
+  --color-accent-teal: #0d9488;
+  --color-accent-green: #0d9488;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
 }
 
 html, body {
@@ -73,7 +75,7 @@ html, body {
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: var(--color-accent-blue);
 }
 
 /* --- Antd token overrides via CSS variables --- */
@@ -178,7 +180,7 @@ body.resizing {
 }
 
 .sidebar-item.active {
-  background: rgba(88, 166, 255, 0.1);
+  background: rgba(0, 180, 216, 0.15);
   color: var(--color-accent-blue);
   border-right: 2px solid var(--color-accent-blue);
 }
@@ -219,17 +221,17 @@ body.resizing {
 
 /* Glassmorphism */
 .glass-card {
-  background: rgba(22, 27, 34, 0.7);
+  background: rgba(17, 25, 39, 0.75);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(48, 54, 61, 0.6);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(30, 41, 59, 0.6);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 :root[data-theme='light'] .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(208, 215, 222, 0.6);
-  box-shadow: 0 8px 32px 0 rgba(140, 149, 159, 0.15);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 8px 32px 0 rgba(2, 132, 199, 0.1);
 }
 
 /* Animated Background */
@@ -240,12 +242,12 @@ body.resizing {
   width: 100%;
   height: 100%;
   z-index: -1;
-  background: radial-gradient(circle at 50% 50%, #161b22 0%, #0d1117 100%);
+  background: radial-gradient(circle at 50% 50%, #111927 0%, #0a0f1d 100%);
   overflow: hidden;
 }
 
 :root[data-theme='light'] .auth-bg {
-  background: radial-gradient(circle at 50% 50%, #ffffff 0%, #f6f8fa 100%);
+  background: radial-gradient(circle at 50% 50%, #ffffff 0%, #f0f7ff 100%);
 }
 
 .auth-bg::before {
@@ -255,14 +257,14 @@ body.resizing {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 30% 30%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
-              radial-gradient(circle at 70% 70%, rgba(247, 129, 102, 0.03) 0%, transparent 50%);
+  background: radial-gradient(circle at 30% 30%, rgba(0, 180, 216, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, rgba(45, 212, 191, 0.06) 0%, transparent 50%);
   animation: rotateBg 20s linear infinite;
 }
 
 :root[data-theme='light'] .auth-bg::before {
-  background: radial-gradient(circle at 30% 30%, rgba(9, 105, 218, 0.04) 0%, transparent 50%),
-              radial-gradient(circle at 70% 70%, rgba(253, 111, 80, 0.03) 0%, transparent 50%);
+  background: radial-gradient(circle at 30% 30%, rgba(2, 132, 199, 0.06) 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, rgba(13, 148, 136, 0.04) 0%, transparent 50%);
 }
 
 @keyframes rotateBg {
@@ -283,6 +285,6 @@ body.resizing {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.4px;
-  color: var(--color-accent-green);
+  color: var(--color-accent-teal);
   text-transform: uppercase;
 }

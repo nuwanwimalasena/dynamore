@@ -45,7 +45,12 @@ struct ProgressPayload {
 }
 
 fn clean_start_url(url: &str) -> String {
-    url.trim().trim_end_matches('/').trim_end_matches("#/").trim_end_matches('/').to_string()
+    let trimmed = url.trim().trim_end_matches('/').trim_end_matches("#/").trim_end_matches('/');
+    if !trimmed.starts_with("http://") && !trimmed.starts_with("https://") {
+        format!("https://{}", trimmed)
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn send_progress(window: &Window, step: &str, message: &str) {
@@ -53,6 +58,14 @@ fn send_progress(window: &Window, step: &str, message: &str) {
         step: step.to_string(),
         message: message.to_string(),
     });
+}
+
+async fn create_sso_oidc_client(region_str: &str) -> SsoOidcClient {
+    let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .region(SsoOidcRegion::new(region_str.to_string()))
+        .load()
+        .await;
+    SsoOidcClient::new(&sdk_config)
 }
 
 #[tauri::command]
@@ -70,29 +83,70 @@ pub async fn auth_init_sso(app: AppHandle, window: Window, start_url: String, re
     
     send_progress(&window, "registering", "Registering with AWS SSO…");
     
-    let sdk_config = aws_config::from_env().region(SsoOidcRegion::new(region.clone())).load().await;
-    let oidc_client = SsoOidcClient::new(&sdk_config);
+    let mut active_region = region.clone();
+    let mut oidc_client = create_sso_oidc_client(&active_region).await;
     
-    let register_res = oidc_client.register_client()
+    let mut register_res = oidc_client.register_client()
         .client_name("dynamore")
         .client_type("public")
         .send()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
         
+    if register_res.is_err() && active_region != "us-east-1" {
+        let fallback_client = create_sso_oidc_client("us-east-1").await;
+        if let Ok(reg) = fallback_client.register_client().client_name("dynamore").client_type("public").send().await {
+            oidc_client = fallback_client;
+            active_region = "us-east-1".to_string();
+            register_res = Ok(reg);
+        }
+    }
+
+    let register_res = register_res.map_err(|e| format!("SSO registration error: {}", e))?;
     let client_id = register_res.client_id().unwrap_or_default().to_string();
     let client_secret = register_res.client_secret().unwrap_or_default().to_string();
     
     send_progress(&window, "authorizing", "Opening browser for sign-in…");
     
-    let auth_res = oidc_client.start_device_authorization()
+    let mut auth_res = oidc_client.start_device_authorization()
         .client_id(&client_id)
         .client_secret(&client_secret)
         .start_url(&start_url)
         .send()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
         
+    if auth_res.is_err() && active_region != "us-east-1" {
+        let fallback_client = create_sso_oidc_client("us-east-1").await;
+        if let Ok(reg) = fallback_client.register_client().client_name("dynamore").client_type("public").send().await {
+            let cid = reg.client_id().unwrap_or_default().to_string();
+            let csec = reg.client_secret().unwrap_or_default().to_string();
+            let fb_auth = fallback_client.start_device_authorization()
+                .client_id(&cid)
+                .client_secret(&csec)
+                .start_url(&start_url)
+                .send()
+                .await;
+            if let Ok(auth_data) = fb_auth {
+                let device_code = auth_data.device_code().unwrap_or_default().to_string();
+                let interval = (auth_data.interval() as u64) * 1000;
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+                let expires_at = now + (auth_data.expires_in() as u64) * 1000;
+                if let Some(uri) = auth_data.verification_uri_complete() {
+                    let _ = open::that(uri);
+                }
+                return Ok(SsoInitResponse {
+                    client_id: cid,
+                    client_secret: csec,
+                    device_code,
+                    interval,
+                    expires_at,
+                    start_url,
+                    region: "us-east-1".to_string(),
+                });
+            }
+        }
+    }
+    
+    let auth_res = auth_res.map_err(|e| format!("Device authorization error: {}", e))?;
     let device_code = auth_res.device_code().unwrap_or_default().to_string();
     let interval = (auth_res.interval() as u64) * 1000;
     
@@ -110,7 +164,7 @@ pub async fn auth_init_sso(app: AppHandle, window: Window, start_url: String, re
         interval,
         expires_at,
         start_url,
-        region,
+        region: active_region,
     })
 }
 
@@ -124,8 +178,13 @@ pub struct SsoTokenResponse {
 pub async fn auth_poll_sso_token(window: Window, region: String, client_id: String, client_secret: String, device_code: String, interval: u64, expires_at: u64) -> Result<SsoTokenResponse, String> {
     send_progress(&window, "polling", "Waiting for browser sign-in to complete…");
     
-    let sdk_config = aws_config::from_env().region(SsoOidcRegion::new(region)).load().await;
+    let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .region(SsoOidcRegion::new(region.clone()))
+        .load()
+        .await;
     let oidc_client = SsoOidcClient::new(&sdk_config);
+    
+    let poll_interval = std::cmp::max(interval, 3000);
     
     loop {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
@@ -133,7 +192,7 @@ pub async fn auth_poll_sso_token(window: Window, region: String, client_id: Stri
             break;
         }
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(interval)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(poll_interval)).await;
         
         let token_res = oidc_client.create_token()
             .client_id(&client_id)
@@ -152,16 +211,38 @@ pub async fn auth_poll_sso_token(window: Window, region: String, client_id: Stri
                     });
                 }
             }
-            Err(err) => {
-                let err_str = format!("{:?}", err);
-                if !err_str.contains("AuthorizationPendingException") {
-                    return Err(err.to_string());
+            Err(sdk_err) => {
+                let is_pending_or_slowdown = match &sdk_err {
+                    aws_sdk_ssooidc::error::SdkError::ServiceError(context) => {
+                        context.err().is_authorization_pending_exception() || context.err().is_slow_down_exception()
+                    }
+                    _ => false,
+                };
+                
+                let debug_str = format!("{:?}", sdk_err);
+                let is_str_pending = debug_str.contains("AuthorizationPendingException")
+                    || debug_str.contains("SlowDownException")
+                    || debug_str.contains("authorization_pending")
+                    || debug_str.contains("slow_down");
+
+                if is_pending_or_slowdown || is_str_pending {
+                    continue;
                 }
+                
+                return Err(format!("Token polling error: {:?}", sdk_err));
             }
         }
     }
     
     Err("Login timed out. Please try again.".to_string())
+}
+
+async fn create_sso_client(region_str: &str) -> SsoClient {
+    let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .region(SsoRegion::new(region_str.to_string()))
+        .load()
+        .await;
+    SsoClient::new(&sdk_config)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -172,14 +253,22 @@ pub struct SsoAccountsResponse {
 
 #[tauri::command]
 pub async fn auth_list_sso_accounts(access_token: String, region: String) -> Result<SsoAccountsResponse, String> {
-    let sdk_config = aws_config::from_env().region(SsoRegion::new(region)).load().await;
-    let sso_client = SsoClient::new(&sdk_config);
+    let sso_client = create_sso_client(&region).await;
     
-    let res = sso_client.list_accounts()
-        .access_token(access_token)
+    let mut res = sso_client.list_accounts()
+        .access_token(&access_token)
         .send()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
+        
+    if res.is_err() && region != "us-east-1" {
+        let fallback_client = create_sso_client("us-east-1").await;
+        let fb_res = fallback_client.list_accounts().access_token(&access_token).send().await;
+        if fb_res.is_ok() {
+            res = fb_res;
+        }
+    }
+
+    let res = res.map_err(|e| format!("List accounts error: {}", e))?;
         
     let accounts = res.account_list().iter().map(|a| {
         serde_json::json!({
@@ -200,15 +289,23 @@ pub struct SsoRolesResponse {
 
 #[tauri::command]
 pub async fn auth_list_sso_account_roles(access_token: String, region: String, account_id: String) -> Result<SsoRolesResponse, String> {
-    let sdk_config = aws_config::from_env().region(SsoRegion::new(region)).load().await;
-    let sso_client = SsoClient::new(&sdk_config);
+    let sso_client = create_sso_client(&region).await;
     
-    let res = sso_client.list_account_roles()
-        .access_token(access_token)
-        .account_id(account_id)
+    let mut res = sso_client.list_account_roles()
+        .access_token(&access_token)
+        .account_id(&account_id)
         .send()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
+        
+    if res.is_err() && region != "us-east-1" {
+        let fallback_client = create_sso_client("us-east-1").await;
+        let fb_res = fallback_client.list_account_roles().access_token(&access_token).account_id(&account_id).send().await;
+        if fb_res.is_ok() {
+            res = fb_res;
+        }
+    }
+
+    let res = res.map_err(|e| format!("List account roles error: {}", e))?;
         
     let roles = res.role_list().iter().map(|r| {
         serde_json::json!({
@@ -230,18 +327,26 @@ pub struct CompleteSsoLoginResponse {
 }
 
 #[tauri::command]
-pub async fn auth_complete_sso_login(app: AppHandle, access_token: String, region: String, account_id: String, role_name: String, start_url: String) -> Result<CompleteSsoLoginResponse, String> {
-    let sdk_config = aws_config::from_env().region(SsoRegion::new(region.clone())).load().await;
-    let sso_client = SsoClient::new(&sdk_config);
+pub async fn auth_complete_sso_login(app: AppHandle, access_token: String, region: String, sso_region: Option<String>, account_id: String, role_name: String, start_url: String) -> Result<CompleteSsoLoginResponse, String> {
+    let portal_region = sso_region.as_deref().unwrap_or(&region);
+    let sso_client = create_sso_client(portal_region).await;
     
-    let res = sso_client.get_role_credentials()
+    let mut res = sso_client.get_role_credentials()
         .access_token(&access_token)
         .account_id(&account_id)
         .role_name(&role_name)
         .send()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
         
+    if res.is_err() && portal_region != "us-east-1" {
+        let fallback_client = create_sso_client("us-east-1").await;
+        let fb_res = fallback_client.get_role_credentials().access_token(&access_token).account_id(&account_id).role_name(&role_name).send().await;
+        if fb_res.is_ok() {
+            res = fb_res;
+        }
+    }
+
+    let res = res.map_err(|e| format!("Get role credentials error: {}", e))?;
     let creds = res.role_credentials().ok_or("No credentials returned")?;
     
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
@@ -343,10 +448,12 @@ pub struct LoginWithKeysResponse {
 
 #[tauri::command]
 pub async fn auth_login_with_keys(app: AppHandle, access_key_id: String, secret_access_key: String, session_token: Option<String>, region: String) -> Result<LoginWithKeysResponse, String> {
+    let clean_session_token = session_token.clone().filter(|s| !s.trim().is_empty());
+    
     let credentials = aws_credential_types::Credentials::new(
         access_key_id.clone(),
         secret_access_key.clone(),
-        session_token.clone(),
+        clean_session_token.clone(),
         None,
         "dynamore"
     );
@@ -368,7 +475,7 @@ pub async fn auth_login_with_keys(app: AppHandle, access_key_id: String, secret_
                 credentials: Some(SessionCredentials {
                     access_key_id,
                     secret_access_key,
-                    session_token,
+                    session_token: clean_session_token,
                     expiration: None,
                 }),
                 start_url: None,

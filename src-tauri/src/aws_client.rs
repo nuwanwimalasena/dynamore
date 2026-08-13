@@ -1,6 +1,6 @@
 use aws_sdk_dynamodb::Client as DynamoDbClient;
-use aws_sdk_dynamodb::config::{Builder, Credentials, Region};
-use tauri::{AppHandle, Manager};
+use aws_sdk_dynamodb::config::{Credentials, Region};
+use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 use serde::{Deserialize, Serialize};
 
@@ -34,18 +34,21 @@ pub async fn get_dynamodb_client(app: AppHandle) -> Result<DynamoDbClient, Strin
 
     let creds = session.credentials.ok_or("No credentials found in session")?;
 
+    let clean_session_token = creds.session_token.filter(|s| !s.trim().is_empty());
+
     let credentials = Credentials::new(
         creds.access_key_id,
         creds.secret_access_key,
-        creds.session_token,
+        clean_session_token,
         creds.expiration.map(|e| std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_millis(e as u64)),
         "dynamore",
     );
 
-    let config = Builder::new()
+    let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .region(Region::new(session.region))
         .credentials_provider(credentials)
-        .build();
+        .load()
+        .await;
 
-    Ok(DynamoDbClient::from_conf(config))
+    Ok(DynamoDbClient::new(&sdk_config))
 }
