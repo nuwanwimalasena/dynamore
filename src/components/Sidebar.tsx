@@ -50,16 +50,21 @@ export default function Sidebar() {
 
     const loadTables = async () => {
         setLoading(true)
-        const res = await window.api.tables.list()
-        if (res.success && res.tableNames) {
-            setTableNames(res.tableNames)
-            if (!selectedTable && res.tableNames.length > 0) {
-                handleSelectTable(res.tableNames[0])
+        try {
+            const res = await window.api.tables.list()
+            if (res && res.tableNames) {
+                setTableNames(res.tableNames)
+                if (!selectedTable && res.tableNames.length > 0) {
+                    handleSelectTable(res.tableNames[0])
+                }
+            } else if (res && !res.success) {
+                message.error(res.error ?? 'Failed to list tables')
             }
-        } else {
-            message.error(res.error ?? 'Failed to list tables')
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? 'Failed to list tables')
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     useEffect(() => {
@@ -68,9 +73,13 @@ export default function Sidebar() {
 
     const handleSelectTable = async (name: string) => {
         setSelectedTable(name)
-        const res = await window.api.tables.describe(name)
-        if (res.success && res.table) {
-            setTableDetail(name, res.table)
+        try {
+            const res = await window.api.tables.describe(name)
+            if (res && res.table) {
+                setTableDetail(name, res.table)
+            }
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? `Failed to describe table "${name}"`)
         }
     }
 
@@ -82,13 +91,17 @@ export default function Sidebar() {
             okType: 'danger',
             cancelText: 'Cancel',
             onOk: async () => {
-                const res = await window.api.tables.delete(name)
-                if (res.success) {
-                    message.success(`Table "${name}" deleted`)
-                    setSelectedTable(null)
-                    await loadTables()
-                } else {
-                    message.error(res.error ?? 'Delete failed')
+                try {
+                    const res = await window.api.tables.delete(name)
+                    if (res && res.success !== false) {
+                        message.success(`Table "${name}" deleted`)
+                        setSelectedTable(null)
+                        await loadTables()
+                    } else {
+                        message.error(res?.error ?? 'Delete failed')
+                    }
+                } catch (err: any) {
+                    message.error(typeof err === 'string' ? err : err?.message ?? 'Delete failed')
                 }
             }
         })

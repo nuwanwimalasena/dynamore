@@ -6,6 +6,7 @@ mod commands;
 
 fn main() {
     tauri::Builder::default()
+        .manage(aws_client::AwsClientState::new())
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())

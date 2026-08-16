@@ -78,16 +78,20 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
             okText: 'Delete',
             okType: 'danger',
             onOk: async () => {
-                // Extract primary key fields (first two columns heuristic – table info not available here)
-                const key = Object.fromEntries(Object.entries(item).slice(0, 2))
-                const res = await window.api.items.delete({ tableName: selectedTable!, key })
-                if (res.success) {
-                    message.success('Item deleted')
-                    const newItems = items.filter(i => i !== item)
-                    if (mode === 'query') setQueryResults(newItems)
-                    else setScanResults(newItems)
-                } else {
-                    message.error(res.error ?? 'Delete failed')
+                try {
+                    // Extract primary key fields (first two columns heuristic – table info not available here)
+                    const key = Object.fromEntries(Object.entries(item).slice(0, 2))
+                    const res = await window.api.items.delete({ tableName: selectedTable!, key })
+                    if (res && res.success !== false) {
+                        message.success('Item deleted')
+                        const newItems = items.filter(i => i !== item)
+                        if (mode === 'query') setQueryResults(newItems)
+                        else setScanResults(newItems)
+                    } else {
+                        message.error(res?.error ?? 'Delete failed')
+                    }
+                } catch (err: any) {
+                    message.error(typeof err === 'string' ? err : err?.message ?? 'Delete failed')
                 }
             }
         })
@@ -101,16 +105,20 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
             okText: 'Delete All',
             okType: 'danger',
             onOk: async () => {
-                const keys = selectedItems.map(item => Object.fromEntries(Object.entries(item).slice(0, 2)))
-                const res = await window.api.items.batchDelete({ tableName: selectedTable!, keys })
-                if (res.success) {
-                    message.success(`${res.deletedCount} item(s) deleted`)
-                    const newItems = items.filter((_, i) => !selected.has(i))
-                    if (mode === 'query') setQueryResults(newItems)
-                    else setScanResults(newItems)
-                    setSelected(new Set())
-                } else {
-                    message.error(res.error ?? 'Batch delete failed')
+                try {
+                    const keys = selectedItems.map(item => Object.fromEntries(Object.entries(item).slice(0, 2)))
+                    const res = await window.api.items.batchDelete({ tableName: selectedTable!, keys })
+                    if (res && res.success !== false) {
+                        message.success(`${res.deletedCount ?? selectedItems.length} item(s) deleted`)
+                        const newItems = items.filter((_, i) => !selected.has(i))
+                        if (mode === 'query') setQueryResults(newItems)
+                        else setScanResults(newItems)
+                        setSelected(new Set())
+                    } else {
+                        message.error(res?.error ?? 'Batch delete failed')
+                    }
+                } catch (err: any) {
+                    message.error(typeof err === 'string' ? err : err?.message ?? 'Batch delete failed')
                 }
             }
         })

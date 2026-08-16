@@ -99,16 +99,20 @@ export default function ScanBuilder({ table }: Props) {
         if (Object.keys(attrNames).length > 0) params.expressionAttributeNames = attrNames
         if (Object.keys(attrValues).length > 0) params.expressionAttributeValues = attrValues
 
-        const res = await window.api.query.scan(params)
-
-        setLoading(false)
-        if (res.success) {
-            const items = res.items as Record<string, unknown>[] ?? []
-            if (loadMore) appendScanResults(items, res.lastEvaluatedKey)
-            else setScanResults(items, res.lastEvaluatedKey)
-            message.success(`${res.count} item(s) returned (scanned: ${res.scannedCount})`)
-        } else {
-            message.error(res.error ?? 'Scan failed')
+        try {
+            const res = await window.api.query.scan(params)
+            if (res && res.success !== false) {
+                const items = (res.items as Record<string, unknown>[]) ?? []
+                if (loadMore) appendScanResults(items, res.lastEvaluatedKey)
+                else setScanResults(items, res.lastEvaluatedKey)
+                message.success(`${res.count ?? items.length} item(s) returned (scanned: ${res.scannedCount ?? items.length})`)
+            } else {
+                message.error(res?.error ?? 'Scan failed')
+            }
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? 'Scan failed')
+        } finally {
+            setLoading(false)
         }
     }, [selectedTable, indexName, filters, limit, lastEvaluatedKey, setScanResults, appendScanResults, message, selectedFields])
 

@@ -133,16 +133,20 @@ export default function QueryBuilder({ table }: Props) {
         if (Object.keys(attrNames).length > 0) params.expressionAttributeNames = attrNames
         if (Object.keys(attrValues).length > 0) params.expressionAttributeValues = attrValues
 
-        const res = await window.api.query.query(params)
-
-        setLoading(false)
-        if (res.success) {
-            const items = res.items as Record<string, unknown>[] ?? []
-            if (loadMore) appendQueryResults(items, res.lastEvaluatedKey)
-            else setQueryResults(items, res.lastEvaluatedKey)
-            message.success(`${res.count} item(s) returned (scanned: ${res.scannedCount})`)
-        } else {
-            message.error(res.error ?? 'Query failed')
+        try {
+            const res = await window.api.query.query(params)
+            if (res && res.success !== false) {
+                const items = (res.items as Record<string, unknown>[]) ?? []
+                if (loadMore) appendQueryResults(items, res.lastEvaluatedKey)
+                else setQueryResults(items, res.lastEvaluatedKey)
+                message.success(`${res.count ?? items.length} item(s) returned (scanned: ${res.scannedCount ?? items.length})`)
+            } else {
+                message.error(res?.error ?? 'Query failed')
+            }
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? 'Query failed')
+        } finally {
+            setLoading(false)
         }
     }, [selectedTable, pkVal, pkAttr, skAttr, skVal, skOp, skVal2, filters, limit, sortAsc, indexName, lastEvaluatedKey, setQueryResults, appendQueryResults, message, selectedFields])
 
