@@ -122,23 +122,26 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
         if (!validate(json)) return
 
         setSaving(true)
-        const parsed = JSON.parse(json) as Record<string, unknown>
-
-        const res = await window.api.items.put({ tableName: selectedTable, item: parsed })
-        setSaving(false)
-
-        if (res.success) {
-            message.success(isNew ? 'Item created' : 'Item saved')
-            // Update local results to reflect edit
-            if (!isNew && item) {
-                const update = (arr: Record<string, unknown>[]) =>
-                    arr.map(r => r === item ? parsed : r)
-                setQueryResults(update(queryResults))
-                setScanResults(update(scanResults))
+        try {
+            const parsed = JSON.parse(json) as Record<string, unknown>
+            const res = await window.api.items.put({ tableName: selectedTable, item: parsed })
+            if (res && res.success !== false) {
+                message.success(isNew ? 'Item created' : 'Item saved')
+                // Update local results to reflect edit
+                if (!isNew && item) {
+                    const update = (arr: Record<string, unknown>[]) =>
+                        arr.map(r => r === item ? parsed : r)
+                    setQueryResults(update(queryResults))
+                    setScanResults(update(scanResults))
+                }
+                onSaved()
+            } else {
+                message.error(res?.error ?? 'Save failed')
             }
-            onSaved()
-        } else {
-            message.error(res.error ?? 'Save failed')
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? 'Save failed')
+        } finally {
+            setSaving(false)
         }
     }
 

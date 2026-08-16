@@ -50,29 +50,34 @@ export default function CreateTableWizard({ open, onClose, onCreated }: Props) {
         const usedAttrs = attrs.filter(a => a.name === keySchema.partitionKey || (hasSortKey && a.name === keySchema.sortKey))
 
         setLoading(true)
-        const res = await window.api.tables.create({
-            TableName: tableName,
-            AttributeDefinitions: usedAttrs.map(a => ({
-                AttributeName: a.name,
-                AttributeType: a.type
-            })),
-            KeySchema: [
-                { AttributeName: keySchema.partitionKey, KeyType: 'HASH' },
-                ...(hasSortKey && keySchema.sortKey ? [{ AttributeName: keySchema.sortKey, KeyType: 'RANGE' }] : [])
-            ],
-            BillingMode: billingMode,
-            ...(billingMode === 'PROVISIONED' ? {
-                ProvisionedThroughput: { ReadCapacityUnits: rcu, WriteCapacityUnits: wcu }
-            } : {})
-        })
-        setLoading(false)
+        try {
+            const res = await window.api.tables.create({
+                TableName: tableName,
+                AttributeDefinitions: usedAttrs.map(a => ({
+                    AttributeName: a.name,
+                    AttributeType: a.type
+                })),
+                KeySchema: [
+                    { AttributeName: keySchema.partitionKey, KeyType: 'HASH' },
+                    ...(hasSortKey && keySchema.sortKey ? [{ AttributeName: keySchema.sortKey, KeyType: 'RANGE' }] : [])
+                ],
+                BillingMode: billingMode,
+                ...(billingMode === 'PROVISIONED' ? {
+                    ProvisionedThroughput: { ReadCapacityUnits: rcu, WriteCapacityUnits: wcu }
+                } : {})
+            })
 
-        if (res.success) {
-            message.success(`Table "${tableName}" created successfully`)
-            onCreated(tableName)
-            resetState()
-        } else {
-            message.error(res.error ?? 'Failed to create table')
+            if (res && res.success !== false) {
+                message.success(`Table "${tableName}" created successfully`)
+                onCreated(tableName)
+                resetState()
+            } else {
+                message.error(res?.error ?? 'Failed to create table')
+            }
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? 'Failed to create table')
+        } finally {
+            setLoading(false)
         }
     }
 
