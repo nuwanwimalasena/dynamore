@@ -1,0 +1,78 @@
+name: dynamore
+base: core22
+version: '2.2.0'
+summary: A sleek, high-performance DynamoDB desktop client
+description: |
+  Dynamore is a fast, native DynamoDB desktop GUI client built with Rust and Tauri.
+
+  Key Features:
+  - AWS SSO / IAM Identity Center authentication with automatic token refresh
+  - AWS Access Key / Secret Key authentication with STS validation
+  - Dynamic post-login region switcher supporting 29 AWS regions
+  - Query and Scan builders with secondary index (GSI & LSI) support
+  - Dynamic Form & JSON item editor
+  - Table creation wizard and schema inspection
+  - Zero Java or Electron bloat: lightweight, native, and secure
+
+grade: stable
+confinement: strict
+license: MIT
+icon: snap/gui/dynamore.png
+
+layout:
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1
+
+apps:
+  dynamore:
+    command: usr/bin/dynamore
+    desktop: usr/share/applications/dynamore.desktop
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - network-bind
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - opengl
+      - browser-support
+      - password-manager-service
+    environment:
+      WEBKIT_DISABLE_COMPOSITING_MODE: '0'
+
+parts:
+  dynamore:
+    plugin: dump
+    source: .
+    build-snaps:
+      - node/22/stable
+      - rustup/latest/stable
+    build-packages:
+      - libwebkit2gtk-4.1-dev
+      - build-essential
+      - curl
+      - wget
+      - file
+      - libssl-dev
+      - libayatana-appindicator3-dev
+      - librsvg2-dev
+      - dpkg
+    stage-packages:
+      - libwebkit2gtk-4.1-0
+      - libjavascriptcoregtk-4.1-0
+      - libayatana-appindicator3-1
+    override-build: |
+      set -eu
+      rustup default stable
+      npm ci
+      npm run build
+      npx tauri build --bundles deb
+
+      # Unpack generated deb bundle into snap directory
+      dpkg -x src-tauri/target/release/bundle/deb/*.deb "$SNAPCRAFT_PART_INSTALL/"
+
+      # Ensure desktop file icon references the installed icon
+      sed -i -e "s|Icon=dynamore|Icon=/usr/share/icons/hicolor/128x128/apps/dynamore.png|g" \
+        "$SNAPCRAFT_PART_INSTALL/usr/share/applications/dynamore.desktop" || true
