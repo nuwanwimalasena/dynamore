@@ -3,6 +3,10 @@
 
 mod aws_client;
 mod commands;
+pub mod error;
+pub mod models;
+pub mod services;
+
 
 fn main() {
     tauri::Builder::default()

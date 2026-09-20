@@ -1,22 +1,13 @@
 import { useState } from 'react'
 import {
     Modal, Steps, Form, Input, Select, Button, Space,
-    InputNumber, Switch, Typography, App as AntApp
+    InputNumber, Switch, Typography, App as AntApp, Card
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { DatabaseOutlined, KeyOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import type { CreateTableRequest, ScalarType, BillingMode } from '../types/dynamo'
 
-const { Text } = Typography
+const { Text, Title } = Typography
 const { Option } = Select
-
-interface AttributeDef {
-    name: string
-    type: 'S' | 'N' | 'B'
-}
-
-interface KeySchema {
-    partitionKey: string
-    sortKey?: string
-}
 
 interface Props {
     open: boolean
@@ -29,50 +20,98 @@ export default function CreateTableWizard({ open, onClose, onCreated }: Props) {
     const [current, setCurrent] = useState(0)
     const [loading, setLoading] = useState(false)
 
-    // Step 1 – basics
+    // Step 1: Table & Key Schema
     const [tableName, setTableName] = useState('')
-    const [attrs, setAttrs] = useState<AttributeDef[]>([
-        { name: '', type: 'S' },
-        { name: '', type: 'S' }
-    ])
-    const [keySchema, setKeySchema] = useState<KeySchema>({ partitionKey: '', sortKey: undefined })
+    const [pkName, setPkName] = useState('')
+    const [pkType, setPkType] = useState<ScalarType>('S')
     const [hasSortKey, setHasSortKey] = useState(false)
+    const [skName, setSkName] = useState('')
+    const [skType, setSkType] = useState<ScalarType>('S')
 
-    // Step 2 – capacity
-    const [billingMode, setBillingMode] = useState<'PAY_PER_REQUEST' | 'PROVISIONED'>('PAY_PER_REQUEST')
+    // Step 2: Capacity & Billing
+    const [billingMode, setBillingMode] = useState<BillingMode>('PAY_PER_REQUEST')
     const [rcu, setRcu] = useState(5)
     const [wcu, setWcu] = useState(5)
 
-    const handleCreate = async () => {
-        if (!tableName) { message.error('Table name is required'); return }
-        if (!keySchema.partitionKey) { message.error('Partition key is required'); return }
+    const resetState = () => {
+        setCurrent(0)
+        setTableName('')
+        setPkName('')
+        setPkType('S')
+        setHasSortKey(false)
+        setSkName('')
+        setSkType('S')
+        setBillingMode('PAY_PER_REQUEST')
+        setRcu(5)
+        setWcu(5)
+    }
 
-        const usedAttrs = attrs.filter(a => a.name === keySchema.partitionKey || (hasSortKey && a.name === keySchema.sortKey))
+    const validateStep0 = (): boolean => {
+        const trimmedTable = tableName.trim()
+        if (!trimmedTable) {
+            message.error('Please enter a Table Name')
+            return false
+        }
+        const trimmedPk = pkName.trim()
+        if (!trimmedPk) {
+            message.error('Please enter a Partition Key name')
+            return false
+        }
+        if (hasSortKey) {
+            const trimmedSk = skName.trim()
+            if (!trimmedSk) {
+                message.error('Please enter a Sort Key name or disable Sort Key')
+                return false
+            }
+            if (trimmedSk === trimmedPk) {
+                message.error('Sort Key name cannot be identical to Partition Key name')
+                return false
+            }
+        }
+        return true
+    }
+
+    const handleNext = () => {
+        if (current === 0 && !validateStep0()) {
+            return
+        }
+        setCurrent(c => c + 1)
+    }
+
+    const handleCreate = async () => {
+        if (!validateStep0()) return
+
+        const trimmedTable = tableName.trim()
+        const trimmedPk = pkName.trim()
+        const trimmedSk = skName.trim()
+
+        const request: CreateTableRequest = {
+            tableName: trimmedTable,
+            partitionKey: {
+                name: trimmedPk,
+                attributeType: pkType,
+            },
+            sortKey: hasSortKey && trimmedSk ? {
+                name: trimmedSk,
+                attributeType: skType,
+            } : undefined,
+            billingMode,
+            provisionedThroughput: billingMode === 'PROVISIONED' ? {
+                readCapacityUnits: rcu,
+                writeCapacityUnits: wcu,
+            } : undefined,
+        }
 
         setLoading(true)
         try {
-            const res = await window.api.tables.create({
-                TableName: tableName,
-                AttributeDefinitions: usedAttrs.map(a => ({
-                    AttributeName: a.name,
-                    AttributeType: a.type
-                })),
-                KeySchema: [
-                    { AttributeName: keySchema.partitionKey, KeyType: 'HASH' },
-                    ...(hasSortKey && keySchema.sortKey ? [{ AttributeName: keySchema.sortKey, KeyType: 'RANGE' }] : [])
-                ],
-                BillingMode: billingMode,
-                ...(billingMode === 'PROVISIONED' ? {
-                    ProvisionedThroughput: { ReadCapacityUnits: rcu, WriteCapacityUnits: wcu }
-                } : {})
-            })
-
-            if (res && res.success !== false) {
-                message.success(`Table "${tableName}" created successfully`)
-                onCreated(tableName)
+            const res = await window.api.tables.create(request)
+            if (res && res.success) {
+                message.success(`Table "${trimmedTable}" created successfully!`)
+                onCreated(trimmedTable)
                 resetState()
+                onClose()
             } else {
-                message.error(res?.error ?? 'Failed to create table')
+                message.error('Failed to create table')
             }
         } catch (err: any) {
             message.error(typeof err === 'string' ? err : err?.message ?? 'Failed to create table')
@@ -81,150 +120,145 @@ export default function CreateTableWizard({ open, onClose, onCreated }: Props) {
         }
     }
 
-    const resetState = () => {
-        setCurrent(0)
-        setTableName('')
-        setAttrs([{ name: '', type: 'S' }, { name: '', type: 'S' }])
-        setKeySchema({ partitionKey: '', sortKey: undefined })
-        setHasSortKey(false)
-        setBillingMode('PAY_PER_REQUEST')
-        setRcu(5)
-        setWcu(5)
-    }
-
     const steps = [
         {
-            title: 'Table Settings',
+            title: 'Primary Keys',
+            icon: <KeyOutlined />,
             content: (
                 <Form layout="vertical" requiredMark={false}>
-                    <Form.Item label="Table Name" required>
+                    <Form.Item
+                        label="Table Name"
+                        required
+                        help="Enter a unique name for your DynamoDB table (e.g. Users, Orders)"
+                    >
                         <Input
                             placeholder="e.g. Users"
                             value={tableName}
                             onChange={e => setTableName(e.target.value)}
+                            size="large"
+                            prefix={<DatabaseOutlined style={{ color: 'var(--color-text-secondary)' }} />}
                         />
                     </Form.Item>
 
-                    <Form.Item label="Attributes">
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                            {attrs.map((attr, i) => (
-                                <Space key={i} style={{ width: '100%' }}>
+                    <Card size="small" title="Partition Key (Hash Key)" style={{ marginBottom: 16 }}>
+                        <Space style={{ width: '100%' }} align="start">
+                            <Form.Item
+                                label="Attribute Name"
+                                required
+                                style={{ marginBottom: 0, minWidth: 280 }}
+                            >
+                                <Input
+                                    placeholder="e.g. id or userId"
+                                    value={pkName}
+                                    onChange={e => setPkName(e.target.value)}
+                                />
+                            </Form.Item>
+                            <Form.Item label="Type" style={{ marginBottom: 0, width: 160 }}>
+                                <Select value={pkType} onChange={v => setPkType(v)}>
+                                    <Option value="S">String (S)</Option>
+                                    <Option value="N">Number (N)</Option>
+                                    <Option value="B">Binary (B)</Option>
+                                </Select>
+                            </Form.Item>
+                        </Space>
+                    </Card>
+
+                    <Card
+                        size="small"
+                        title={
+                            <Space>
+                                <span>Sort Key (Range Key)</span>
+                                <Switch
+                                    checked={hasSortKey}
+                                    onChange={setHasSortKey}
+                                />
+                            </Space>
+                        }
+                    >
+                        {hasSortKey ? (
+                            <Space style={{ width: '100%' }} align="start">
+                                <Form.Item
+                                    label="Attribute Name"
+                                    required
+                                    style={{ marginBottom: 0, minWidth: 280 }}
+                                >
                                     <Input
-                                        placeholder="Attribute name"
-                                        value={attr.name}
-                                        onChange={e => {
-                                            const next = [...attrs]
-                                            next[i] = { ...next[i], name: e.target.value }
-                                            setAttrs(next)
-                                        }}
-                                        style={{ width: 200 }}
+                                        placeholder="e.g. createdAt or timestamp"
+                                        value={skName}
+                                        onChange={e => setSkName(e.target.value)}
                                     />
-                                    <Select
-                                        value={attr.type}
-                                        onChange={v => {
-                                            const next = [...attrs]
-                                            next[i] = { ...next[i], type: v }
-                                            setAttrs(next)
-                                        }}
-                                        style={{ width: 120 }}
-                                    >
+                                </Form.Item>
+                                <Form.Item label="Type" style={{ marginBottom: 0, width: 160 }}>
+                                    <Select value={skType} onChange={v => setSkType(v)}>
                                         <Option value="S">String (S)</Option>
                                         <Option value="N">Number (N)</Option>
                                         <Option value="B">Binary (B)</Option>
                                     </Select>
-                                    {attrs.length > 1 && (
-                                        <Button
-                                            type="text"
-                                            danger
-                                            icon={<DeleteOutlined />}
-                                            onClick={() => setAttrs(attrs.filter((_, j) => j !== i))}
-                                        />
-                                    )}
-                                </Space>
-                            ))}
-                            <Button
-                                type="dashed"
-                                icon={<PlusOutlined />}
-                                onClick={() => setAttrs([...attrs, { name: '', type: 'S' }])}
-                                block
-                            >
-                                Add attribute
-                            </Button>
-                        </Space>
-                    </Form.Item>
-
-                    <Form.Item label="Partition Key (Hash)" required>
-                        <Select
-                            placeholder="Select attribute"
-                            value={keySchema.partitionKey || undefined}
-                            onChange={v => setKeySchema(k => ({ ...k, partitionKey: v }))}
-                        >
-                            {attrs.filter(a => a.name).map(a => (
-                                <Option key={a.name} value={a.name}>{a.name} ({a.type})</Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item label={
-                        <Space>
-                            Sort Key (Range)
-                            <Switch size="small" checked={hasSortKey} onChange={setHasSortKey} />
-                        </Space>
-                    }>
-                        {hasSortKey && (
-                            <Select
-                                placeholder="Select attribute"
-                                value={keySchema.sortKey || undefined}
-                                onChange={v => setKeySchema(k => ({ ...k, sortKey: v }))}
-                            >
-                                {attrs.filter(a => a.name && a.name !== keySchema.partitionKey).map(a => (
-                                    <Option key={a.name} value={a.name}>{a.name} ({a.type})</Option>
-                                ))}
-                            </Select>
+                                </Form.Item>
+                            </Space>
+                        ) : (
+                            <Text type="secondary" style={{ fontSize: 13 }}>
+                                Sort key is optional. Enable if your table uses a composite primary key.
+                            </Text>
                         )}
-                    </Form.Item>
+                    </Card>
                 </Form>
             )
         },
         {
-            title: 'Capacity',
+            title: 'Capacity & Summary',
+            icon: <ThunderboltOutlined />,
             content: (
                 <Form layout="vertical" requiredMark={false}>
-                    <Form.Item label="Billing Mode">
+                    <Form.Item label="Billing / Capacity Mode">
                         <Select
                             value={billingMode}
                             onChange={v => setBillingMode(v)}
+                            size="large"
                         >
-                            <Option value="PAY_PER_REQUEST">On-Demand (Pay per request)</Option>
-                            <Option value="PROVISIONED">Provisioned</Option>
+                            <Option value="PAY_PER_REQUEST">On-Demand (Pay per request — Recommended)</Option>
+                            <Option value="PROVISIONED">Provisioned (Set manual RCU & WCU)</Option>
                         </Select>
                     </Form.Item>
 
                     {billingMode === 'PROVISIONED' && (
-                        <Space>
-                            <Form.Item label="Read Capacity Units">
-                                <InputNumber min={1} value={rcu} onChange={v => setRcu(v ?? 1)} />
+                        <Space size="large" style={{ marginBottom: 16 }}>
+                            <Form.Item label="Read Capacity Units (RCU)">
+                                <InputNumber min={1} max={40000} value={rcu} onChange={v => setRcu(v ?? 1)} />
                             </Form.Item>
-                            <Form.Item label="Write Capacity Units">
-                                <InputNumber min={1} value={wcu} onChange={v => setWcu(v ?? 1)} />
+                            <Form.Item label="Write Capacity Units (WCU)">
+                                <InputNumber min={1} max={40000} value={wcu} onChange={v => setWcu(v ?? 1)} />
                             </Form.Item>
                         </Space>
                     )}
 
                     <div style={{
-                        background: 'var(--color-surface-2)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--color-surface-2, #1f1f1f)',
+                        border: '1px solid var(--color-border, #303030)',
+                        borderRadius: 8,
                         padding: 16,
-                        marginTop: 8
+                        marginTop: 12
                     }}>
-                        <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                            <strong>Summary</strong><br />
-                            Table: <code>{tableName || '—'}</code><br />
-                            Partition key: <code>{keySchema.partitionKey || '—'}</code>
-                            {hasSortKey && keySchema.sortKey && <>, Sort key: <code>{keySchema.sortKey}</code></>}<br />
-                            Billing: {billingMode === 'PAY_PER_REQUEST' ? 'On-Demand' : `Provisioned (${rcu} RCU / ${wcu} WCU)`}
-                        </Text>
+                        <Title level={5} style={{ marginTop: 0, marginBottom: 12 }}>
+                            Schema Summary
+                        </Title>
+                        <Space orientation="vertical" orientationMargin="0" style={{ width: '100%', gap: 6 }}>
+                            <div><strong>Table:</strong> <code>{tableName.trim() || '—'}</code></div>
+                            <div>
+                                <strong>Partition Key:</strong>{' '}
+                                <code>{pkName.trim() || '—'} ({pkType})</code>
+                            </div>
+                            {hasSortKey && (
+                                <div>
+                                    <strong>Sort Key:</strong>{' '}
+                                    <code>{skName.trim() || '—'} ({skType})</code>
+                                </div>
+                            )}
+                            <div>
+                                <strong>Capacity:</strong>{' '}
+                                {billingMode === 'PAY_PER_REQUEST' ? 'On-Demand' : `Provisioned (${rcu} RCU / ${wcu} WCU)`}
+                            </div>
+                        </Space>
                     </div>
                 </Form>
             )
@@ -234,28 +268,29 @@ export default function CreateTableWizard({ open, onClose, onCreated }: Props) {
     return (
         <Modal
             open={open}
-            title="Create Table"
+            title="Create DynamoDB Table"
             onCancel={() => { onClose(); resetState() }}
             footer={null}
-            width={560}
+            width={580}
+            destroyOnClose
         >
             <Steps
                 current={current}
                 size="small"
-                style={{ marginBottom: 24 }}
-                items={steps.map(s => ({ title: s.title }))}
+                style={{ marginBottom: 24, marginTop: 12 }}
+                items={steps.map(s => ({ title: s.title, icon: s.icon }))}
             />
 
-            <div style={{ minHeight: 320 }}>
+            <div style={{ minHeight: 340 }}>
                 {steps[current].content}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24, borderTop: '1px solid var(--color-border, #303030)', paddingTop: 16 }}>
                 {current > 0 && (
                     <Button onClick={() => setCurrent(c => c - 1)}>Back</Button>
                 )}
                 {current < steps.length - 1 && (
-                    <Button type="primary" onClick={() => setCurrent(c => c + 1)}>
+                    <Button type="primary" onClick={handleNext}>
                         Next →
                     </Button>
                 )}

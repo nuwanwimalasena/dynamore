@@ -39,3 +39,5 @@ aws-sdk-sts = "1.21"
 serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+1"] }
 open = "5.3.5"
 aws-credential-types = "1.2.10"
+thiserror = "1"
+

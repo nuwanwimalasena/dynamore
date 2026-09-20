@@ -56,22 +56,50 @@ impl AwsClientState {
     }
 }
 
-pub fn sanitize_error_message(err: impl std::fmt::Display) -> String {
-    let msg = err.to_string();
-    let first_line = msg.lines().next().unwrap_or("Unknown AWS SDK error");
-    first_line.trim().to_string()
+pub fn sanitize_error_message(err: impl std::error::Error) -> String {
+    let mut messages = Vec::new();
+    let root = err.to_string();
+    if !root.is_empty() && root != "service error" && root != "operation error" {
+        messages.push(root);
+    }
+
+    let mut current = err.source();
+    while let Some(src) = current {
+        let src_str = src.to_string();
+        if !src_str.is_empty()
+            && src_str != "service error"
+            && src_str != "operation error"
+            && !messages.contains(&src_str)
+        {
+            messages.push(src_str);
+        }
+        current = src.source();
+    }
+
+    if messages.is_empty() {
+        format!("{:?}", err)
+    } else {
+        messages.join(": ")
+    }
 }
 
 pub async fn get_dynamodb_client(
     state: &AwsClientState,
     app: &AppHandle,
-) -> Result<DynamoDbClient, String> {
-    let store = app.store("dynamore-auth").map_err(|e| e.to_string())?;
+) -> Result<DynamoDbClient, crate::error::AppError> {
+    let store = app
+        .store("dynamore-auth")
+        .map_err(|e| crate::error::AppError::Auth(format!("Failed to open auth store: {}", e)))?;
 
-    let session_val = store.get("session").ok_or_else(|| "Not authenticated. Please log in.".to_string())?;
-    let session: SessionData = serde_json::from_value(session_val).map_err(|e| format!("Invalid session data: {}", e))?;
+    let session_val = store
+        .get("session")
+        .ok_or_else(|| crate::error::AppError::Auth("Not authenticated. Please log in.".to_string()))?;
+    let session: SessionData = serde_json::from_value(session_val)
+        .map_err(|e| crate::error::AppError::Auth(format!("Invalid session data: {}", e)))?;
 
-    let creds = session.credentials.ok_or_else(|| "No credentials found in active session.".to_string())?;
+    let creds = session
+        .credentials
+        .ok_or_else(|| crate::error::AppError::Auth("No credentials found in active session.".to_string()))?;
 
     // Check expiration for temporary credentials (SSO or STS assume-role)
     if let Some(exp_ms) = creds.expiration {
@@ -81,7 +109,9 @@ pub async fn get_dynamodb_client(
             .unwrap_or(0);
         if now_ms >= exp_ms.saturating_sub(60_000) {
             state.invalidate().await;
-            return Err("Session has expired. Please log in again.".to_string());
+            return Err(crate::error::AppError::Auth(
+                "Session has expired. Please log in again.".to_string(),
+            ));
         }
     }
 
@@ -144,3 +174,63 @@ pub async fn get_dynamodb_client(
 
     Ok(client)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug)]
+    struct CustomError(&'static str);
+
+    impl std::fmt::Display for CustomError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
+
+    impl std::error::Error for CustomError {}
+
+    #[derive(Debug)]
+    struct NestedError {
+        msg: &'static str,
+        source: CustomError,
+    }
+
+    impl std::fmt::Display for NestedError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.msg)
+        }
+    }
+
+    impl std::error::Error for NestedError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.source)
+        }
+    }
+
+    #[test]
+    fn test_sanitize_error_message_unwraps_source_chain() {
+        let err = NestedError {
+            msg: "service error",
+            source: CustomError("ValidationException: Number of attributes in KeySchema does not match AttributeDefinitions"),
+        };
+
+        let result = sanitize_error_message(err);
+        assert_eq!(
+            result,
+            "ValidationException: Number of attributes in KeySchema does not match AttributeDefinitions"
+        );
+    }
+
+    #[test]
+    fn test_empty_session_token_pruning() {
+        let token_empty = Some("   ".to_string());
+        let clean = token_empty.filter(|s| !s.trim().is_empty());
+        assert_eq!(clean, None);
+
+        let token_valid = Some(" valid-token-123 ".to_string());
+        let clean_valid = token_valid.filter(|s| !s.trim().is_empty());
+        assert_eq!(clean_valid, Some(" valid-token-123 ".to_string()));
+    }
+}
+

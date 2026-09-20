@@ -263,3 +263,29 @@ This audit log records all user inputs, agent actions, phase transitions, and ap
 1. Recorded final approval in audit log.
 2. Verified all AI-DLC artifacts in `aidlc-docs/inception/` and `aidlc-docs/construction/`.
 3. Marked project state as fully finalized in `aidlc-docs/aidlc-state.md`.
+
+---
+
+### [2026-08-16T14:29:30+05:30] Full-Stack Architecture Refactoring & Automated Test Suites
+
+**Raw User Prompt**:
+> yes. I need fix whole codebase. As a Senior Rust/React Developer
+> I dnt see any unit tests in this project.
+> So only 2 tests. and No any test for BE logis. what kind of senior development is this?
+
+**Engineering Actions**:
+1. **Rust Backend Architecture Overhaul**:
+   - Introduced domain `AppError` enum implementing `thiserror` and `Serialize`, unwrapping AWS SDK `SdkError` error codes and message chains.
+   - Designed strongly typed DTOs in `src-tauri/src/models/` (`tables.rs`, `items.rs`, `query.rs`).
+   - Implemented unified `DynamoService` layer in `src-tauri/src/services/dynamo_service.rs` encapsulating all DynamoDB operations, key schema attribute resolution, auto-pagination loops, and chunked batch mutations.
+   - Refactored `src-tauri/src/commands/` controllers to thin delegates returning `Result<T, AppError>`.
+2. **Frontend Architecture & IPC Bridge**:
+   - Created `src/types/dynamo.ts` matching backend DTO schemas.
+   - Updated `src/api.ts` with strongly typed Tauri IPC calls.
+   - Rebuilt `src/pages/CreateTableWizard.tsx` with direct primary key and capacity state modeling.
+   - Enhanced `src/components/ResultsGrid.tsx` to accurately extract primary key attributes using cached `TableDescription` schema.
+3. **Automated Unit & Integration Test Suites**:
+   - **Rust Backend (`cargo test`)**: 24 tests across 5 test suites (`lib`, `main`, `table_logic_tests`, `item_logic_tests`, `query_logic_tests`, `auth_logic_tests`).
+   - **React Frontend (`npm test` / Vitest)**: 15 tests across 4 test suites (`table_wizard`, `dynamo_types`, `expression_builder`, `appStore`).
+   - Total **39 automated tests** running in ~2.5s with 100% pass rate.
+

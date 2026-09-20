@@ -1,7 +1,24 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
+import type {
+    CreateTableRequest,
+    TableCreateResponse,
+    TableDeleteResponse,
+    TableDescribeResponse,
+    TableListResponse,
+    PutItemRequest,
+    GetItemRequest,
+    UpdateItemRequest,
+    DeleteItemRequest,
+    BatchDeleteItemsRequest,
+    ItemResponse,
+    MutationResponse,
+    QueryRequest,
+    ScanRequest,
+    QueryResultDto
+} from './types/dynamo'
 
-// Real Tauri IPC API — Direct invoke calls to Rust backend
+// Strongly-typed Tauri IPC Bridge
 export const api = {
     // Auth
     auth: {
@@ -32,29 +49,36 @@ export const api = {
 
     // Tables
     tables: {
-        list: () => invoke<any>('tables_list'),
-        describe: (tableName: string) => invoke<any>('tables_describe', { tableName }),
-        create: (params: unknown) => invoke<any>('tables_create', { params }),
-        delete: (tableName: string) => invoke<any>('tables_delete', { tableName })
+        list: (): Promise<TableListResponse> =>
+            invoke<TableListResponse>('tables_list'),
+        describe: (tableName: string): Promise<TableDescribeResponse> =>
+            invoke<TableDescribeResponse>('tables_describe', { tableName }),
+        create: (req: CreateTableRequest): Promise<TableCreateResponse> =>
+            invoke<TableCreateResponse>('tables_create', { req }),
+        delete: (tableName: string): Promise<TableDeleteResponse> =>
+            invoke<TableDeleteResponse>('tables_delete', { tableName })
     },
 
     // Items
     items: {
-        put: (params: { tableName: string; item: Record<string, unknown> }) =>
-            invoke<any>('items_put', params),
-        get: (params: { tableName: string; key: Record<string, unknown> }) =>
-            invoke<any>('items_get', params),
-        update: (params: unknown) => invoke<any>('items_update', { params }),
-        delete: (params: { tableName: string; key: Record<string, unknown> }) =>
-            invoke<any>('items_delete', params),
-        batchDelete: (params: { tableName: string; keys: Record<string, unknown>[] }) =>
-            invoke<any>('items_batch_delete', params)
+        put: (params: PutItemRequest): Promise<MutationResponse> =>
+            invoke<MutationResponse>('items_put', params),
+        get: (params: GetItemRequest): Promise<ItemResponse> =>
+            invoke<ItemResponse>('items_get', params),
+        update: (req: UpdateItemRequest): Promise<ItemResponse> =>
+            invoke<ItemResponse>('items_update', { req }),
+        delete: (params: DeleteItemRequest): Promise<MutationResponse> =>
+            invoke<MutationResponse>('items_delete', params),
+        batchDelete: (params: BatchDeleteItemsRequest): Promise<MutationResponse> =>
+            invoke<MutationResponse>('items_batch_delete', params)
     },
 
     // Query & Scan
     query: {
-        query: (params: unknown) => invoke<any>('query_query', { params }),
-        scan: (params: unknown) => invoke<any>('query_scan', { params })
+        query: (req: QueryRequest): Promise<QueryResultDto> =>
+            invoke<QueryResultDto>('query_query', { req }),
+        scan: (req: ScanRequest): Promise<QueryResultDto> =>
+            invoke<QueryResultDto>('query_scan', { req })
     },
 
     // Auto-updater
@@ -71,7 +95,6 @@ export const api = {
     }
 }
 
-// Map window.api to this module for global access in the existing codebase
 declare global {
     interface Window {
         api: typeof api;

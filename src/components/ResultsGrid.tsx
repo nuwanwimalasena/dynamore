@@ -25,51 +25,28 @@ function renderCell(val: unknown): React.ReactNode {
 }
 
 export default function ResultsGrid({ items, mode, onEdit }: Props) {
-    const { selectedTable, setQueryResults, setScanResults } = useAppStore()
+    const { selectedTable, tableDetails, setQueryResults, setScanResults } = useAppStore()
     const { message, modal } = AntApp.useApp()
     const [selected, setSelected] = useState<Set<number>>(new Set())
 
-    // Auto-detect columns from first 20 items
-    const columns = useMemo<ColumnsType<Record<string, unknown>>>(() => {
-        const keys = new Set<string>()
-        items.slice(0, 20).forEach(item => Object.keys(item).forEach(k => keys.add(k)))
-        const cols: ColumnsType<Record<string, unknown>> = [...keys].map(key => ({
-            title: key,
-            dataIndex: key,
-            key,
-            ellipsis: true,
-            width: 160,
-            render: (val) => renderCell(val)
-        }))
-        cols.push({
-            title: 'Actions',
-            key: '__actions',
-            fixed: 'right',
-            width: 80,
-            render: (_, record) => (
-                <Space size={4}>
-                    <Tooltip title="Edit item">
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => onEdit(record)}
-                        />
-                    </Tooltip>
-                    <Tooltip title="Delete item">
-                        <Button
-                            type="text"
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDeleteItem(record)}
-                        />
-                    </Tooltip>
-                </Space>
-            )
-        })
-        return cols
-    }, [items])// eslint-disable-line react-hooks/exhaustive-deps
+    const currentTableDetail = selectedTable ? tableDetails[selectedTable] : undefined
+
+    const extractPrimaryKey = (item: Record<string, unknown>): Record<string, unknown> => {
+        const keySchema = currentTableDetail?.keySchema ?? currentTableDetail?.KeySchema ?? []
+        if (keySchema.length > 0) {
+            const keyObj: Record<string, unknown> = {}
+            for (const k of keySchema) {
+                const attrName = (k as any).attributeName ?? (k as any).AttributeName
+                if (attrName && item[attrName] !== undefined) {
+                    keyObj[attrName] = item[attrName]
+                }
+            }
+            if (Object.keys(keyObj).length > 0) {
+                return keyObj
+            }
+        }
+        return Object.fromEntries(Object.entries(item).slice(0, 2))
+    }
 
     const handleDeleteItem = async (item: Record<string, unknown>) => {
         modal.confirm({
@@ -79,8 +56,7 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
             okType: 'danger',
             onOk: async () => {
                 try {
-                    // Extract primary key fields (first two columns heuristic – table info not available here)
-                    const key = Object.fromEntries(Object.entries(item).slice(0, 2))
+                    const key = extractPrimaryKey(item)
                     const res = await window.api.items.delete({ tableName: selectedTable!, key })
                     if (res && res.success !== false) {
                         message.success('Item deleted')
@@ -88,7 +64,7 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
                         if (mode === 'query') setQueryResults(newItems)
                         else setScanResults(newItems)
                     } else {
-                        message.error(res?.error ?? 'Delete failed')
+                        message.error('Delete failed')
                     }
                 } catch (err: any) {
                     message.error(typeof err === 'string' ? err : err?.message ?? 'Delete failed')
@@ -106,16 +82,16 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
             okType: 'danger',
             onOk: async () => {
                 try {
-                    const keys = selectedItems.map(item => Object.fromEntries(Object.entries(item).slice(0, 2)))
+                    const keys = selectedItems.map(item => extractPrimaryKey(item))
                     const res = await window.api.items.batchDelete({ tableName: selectedTable!, keys })
                     if (res && res.success !== false) {
-                        message.success(`${res.deletedCount ?? selectedItems.length} item(s) deleted`)
+                        message.success(`${selectedItems.length} item(s) deleted`)
                         const newItems = items.filter((_, i) => !selected.has(i))
                         if (mode === 'query') setQueryResults(newItems)
                         else setScanResults(newItems)
                         setSelected(new Set())
                     } else {
-                        message.error(res?.error ?? 'Batch delete failed')
+                        message.error('Batch delete failed')
                     }
                 } catch (err: any) {
                     message.error(typeof err === 'string' ? err : err?.message ?? 'Batch delete failed')
