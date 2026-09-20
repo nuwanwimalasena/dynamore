@@ -32,4 +32,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // One-click copy for CLI commands
+    document.querySelectorAll('.cli-box').forEach(box => {
+        box.addEventListener('click', async () => {
+            const command = box.getAttribute('data-copy');
+            if (!command) return;
+
+            try {
+                await navigator.clipboard.writeText(command);
+                const icon = box.querySelector('.cli-copy-icon');
+                if (icon) {
+                    const original = icon.textContent;
+                    icon.textContent = '✓';
+                    setTimeout(() => {
+                        icon.textContent = original;
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Failed to copy to clipboard:', err);
+            }
+        });
+    });
 });
