@@ -1,6 +1,6 @@
 [package]
 name = "dynamore"
-version = "2.1.1"
+version = "2.2.0"
 description = "A sleek, high-performance DynamoDB desktop client"
 authors = ["Nuwan Wimalasena <nuwan@example.com>"]
 license = "MIT"
@@ -40,4 +40,3 @@ serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+1"] }
 open = "5.3.5"
 aws-credential-types = "1.2.10"
 thiserror = "1"
-
