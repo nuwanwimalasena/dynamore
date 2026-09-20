@@ -1,13 +1,14 @@
 {
   "name": "dynamore",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "A DynamoDB desktop client",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest run"
   },
   "keywords": [
     "dynamodb",

@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
     Form, Input, Select, Button, Space, InputNumber,
-    Divider, Typography, Tooltip, App as AntApp
+    Divider, Typography, Tooltip, App as AntApp, AutoComplete
 } from 'antd'
 import { PlayCircleOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
@@ -20,20 +20,40 @@ interface FilterRow {
     val2?: string
 }
 
-function buildExpression(filters: FilterRow[], attrNames: Record<string, string>, attrValues: Record<string, unknown>, prefix: string) {
+function parseAttrVal(val: string, attrType?: string): unknown {
+    if (attrType === 'N' || (!attrType && !isNaN(Number(val)) && val.trim() !== '')) {
+        return Number(val)
+    }
+    if (attrType === 'BOOL' || val === 'true' || val === 'false') {
+        if (val === 'true') return true
+        if (val === 'false') return false
+    }
+    return val
+}
+
+function buildExpression(
+    filters: FilterRow[],
+    attrNames: Record<string, string>,
+    attrValues: Record<string, unknown>,
+    prefix: string,
+    attrTypes: Record<string, string>
+) {
     const parts: string[] = []
     filters.forEach((f, i) => {
         if (!f.attr) return
         const nKey = `#${prefix}attr${i}`
         const vKey = `:${prefix}val${i}`
         attrNames[nKey] = f.attr
+
+        const parsedVal = parseAttrVal(f.val, attrTypes[f.attr])
+
         if (f.op === 'attribute_exists' || f.op === 'attribute_not_exists') {
             parts.push(`${f.op}(${nKey})`)
         } else if (f.op === 'begins_with' || f.op === 'contains') {
             attrValues[vKey] = f.val
             parts.push(`${f.op}(${nKey}, ${vKey})`)
         } else {
-            attrValues[vKey] = f.val
+            attrValues[vKey] = parsedVal
             parts.push(`${nKey} ${f.op} ${vKey}`)
         }
     })
@@ -49,11 +69,54 @@ export default function QueryBuilder({ table }: Props) {
     const { message } = AntApp.useApp()
     const [loading, setLoading] = useState(false)
 
-    // Index selection
-    const allIndexes = [
-        ...(table.GlobalSecondaryIndexes ?? []),
-        ...(table.LocalSecondaryIndexes ?? [])
-    ] as Array<{ IndexName?: string; KeySchema?: Array<{ AttributeName: string; KeyType: string }> }>
+    // Normalize schema items
+    const tableKeySchema = useMemo(() => {
+        const raw = (table as any).keySchema ?? (table as any).KeySchema ?? []
+        return (raw as any[]).map(k => ({
+            attributeName: k.attributeName ?? k.AttributeName ?? k.attribute_name ?? '',
+            keyType: (k.keyType ?? k.KeyType ?? k.key_type ?? '').toUpperCase()
+        }))
+    }, [table])
+
+    const tableAttrDefs = useMemo(() => {
+        const raw = (table as any).attributeDefinitions ?? (table as any).AttributeDefinitions ?? []
+        return (raw as any[]).map(a => ({
+            attributeName: a.attributeName ?? a.AttributeName ?? a.attribute_name ?? '',
+            attributeType: (a.attributeType ?? a.AttributeType ?? a.attribute_type ?? 'S').toUpperCase()
+        }))
+    }, [table])
+
+    const attrTypeMap = useMemo(() => {
+        const map: Record<string, string> = {}
+        for (const def of tableAttrDefs) {
+            if (def.attributeName) {
+                map[def.attributeName] = def.attributeType
+            }
+        }
+        return map
+    }, [tableAttrDefs])
+
+    // Normalize GSIs and LSIs
+    const allIndexes = useMemo(() => {
+        const rawGsi = (table as any).globalSecondaryIndexes ?? (table as any).GlobalSecondaryIndexes ?? []
+        const rawLsi = (table as any).localSecondaryIndexes ?? (table as any).LocalSecondaryIndexes ?? []
+        return [
+            ...rawGsi.map((idx: any) => ({
+                indexName: idx.indexName ?? idx.IndexName ?? '',
+                keySchema: ((idx.keySchema ?? idx.KeySchema ?? []) as any[]).map(k => ({
+                    attributeName: k.attributeName ?? k.AttributeName ?? k.attribute_name ?? '',
+                    keyType: (k.keyType ?? k.KeyType ?? k.key_type ?? '').toUpperCase()
+                }))
+            })),
+            ...rawLsi.map((idx: any) => ({
+                indexName: idx.indexName ?? idx.IndexName ?? '',
+                keySchema: ((idx.keySchema ?? idx.KeySchema ?? []) as any[]).map(k => ({
+                    attributeName: k.attributeName ?? k.AttributeName ?? k.attribute_name ?? '',
+                    keyType: (k.keyType ?? k.KeyType ?? k.key_type ?? '').toUpperCase()
+                }))
+            }))
+        ].filter(idx => Boolean(idx.indexName))
+    }, [table])
 
     const [indexName, setIndexName] = useState<string | undefined>(undefined)
     const [pkVal, setPkVal] = useState('')
@@ -66,19 +129,24 @@ export default function QueryBuilder({ table }: Props) {
     const [selectedFields, setSelectedFields] = useState<string[]>([])
 
     // Determine key schema from selected index or table
-    const activeSchema = indexName
-        ? (allIndexes.find(i => i.IndexName === indexName)?.KeySchema ?? [])
-        : (table.KeySchema ?? [])
-    const pkAttr = activeSchema.find(k => k.KeyType === 'HASH')?.AttributeName ?? ''
-    const skAttr = activeSchema.find(k => k.KeyType === 'RANGE')?.AttributeName ?? ''
+    const activeSchema = useMemo(() => {
+        if (indexName) {
+            const found = allIndexes.find(i => i.indexName === indexName)
+            if (found && found.keySchema.length > 0) return found.keySchema
+        }
+        return tableKeySchema
+    }, [indexName, allIndexes, tableKeySchema])
 
-    const knownAttributes = Array.from(
+    const pkAttr = activeSchema.find(k => k.keyType === 'HASH')?.attributeName ?? ''
+    const skAttr = activeSchema.find(k => k.keyType === 'RANGE')?.attributeName ?? ''
+
+    const knownAttributes = useMemo(() => Array.from(
         new Set([
-            ...(table.KeySchema ?? []).map(k => k.AttributeName),
-            ...(table.AttributeDefinitions ?? []).map(a => a.AttributeName),
-            ...allIndexes.flatMap((idx: any) => (idx.KeySchema ?? []).map((k: any) => k.AttributeName))
+            ...tableKeySchema.map(k => k.attributeName),
+            ...tableAttrDefs.map(a => a.attributeName),
+            ...allIndexes.flatMap(idx => idx.keySchema.map(k => k.attributeName))
         ])
-    ).filter(Boolean)
+    ).filter(Boolean), [tableKeySchema, tableAttrDefs, allIndexes])
 
     const addFilter = () => setFilters(f => [...f, { attr: '', op: '=', val: '' }])
     const removeFilter = (i: number) => setFilters(f => f.filter((_, j) => j !== i))
@@ -89,26 +157,29 @@ export default function QueryBuilder({ table }: Props) {
         if (!selectedTable || !pkVal) { message.warning('Partition key value is required'); return }
         setLoading(true)
 
+        const pkType = attrTypeMap[pkAttr] || 'S'
+        const skType = attrTypeMap[skAttr] || 'S'
+
         const attrNames: Record<string, string> = { '#pk': pkAttr }
-        const attrValues: Record<string, unknown> = { ':pkval': pkVal }
+        const attrValues: Record<string, unknown> = { ':pkval': parseAttrVal(pkVal, pkType) }
 
         let kce = '#pk = :pkval'
         if (skAttr && skVal) {
             attrNames['#sk'] = skAttr
             if (skOp === 'BETWEEN') {
-                attrValues[':skval'] = skVal
-                attrValues[':skval2'] = skVal2
+                attrValues[':skval'] = parseAttrVal(skVal, skType)
+                attrValues[':skval2'] = parseAttrVal(skVal2, skType)
                 kce += ' AND #sk BETWEEN :skval AND :skval2'
             } else if (skOp === 'begins_with') {
                 attrValues[':skval'] = skVal
                 kce += ' AND begins_with(#sk, :skval)'
             } else {
-                attrValues[':skval'] = skVal
+                attrValues[':skval'] = parseAttrVal(skVal, skType)
                 kce += ` AND #sk ${skOp} :skval`
             }
         }
 
-        const filterExpr = buildExpression(filters, attrNames, attrValues, 'f')
+        const filterExpr = buildExpression(filters, attrNames, attrValues, 'f', attrTypeMap)
 
         let projectionExpr: string | undefined = undefined
         if (selectedFields && selectedFields.length > 0) {
@@ -148,7 +219,7 @@ export default function QueryBuilder({ table }: Props) {
         } finally {
             setLoading(false)
         }
-    }, [selectedTable, pkVal, pkAttr, skAttr, skVal, skOp, skVal2, filters, limit, sortAsc, indexName, lastEvaluatedKey, setQueryResults, appendQueryResults, message, selectedFields])
+    }, [selectedTable, pkVal, pkAttr, skAttr, skVal, skOp, skVal2, filters, limit, sortAsc, indexName, lastEvaluatedKey, setQueryResults, appendQueryResults, message, selectedFields, attrTypeMap])
 
     const exportResults = () => {
         const { queryResults } = useAppStore.getState()
@@ -176,7 +247,7 @@ export default function QueryBuilder({ table }: Props) {
                             size="small"
                         >
                             {allIndexes.map(idx => (
-                                <Option key={idx.IndexName} value={idx.IndexName}>{idx.IndexName}</Option>
+                                <Option key={idx.indexName} value={idx.indexName}>{idx.indexName}</Option>
                             ))}
                         </Select>
                     </Form.Item>
@@ -284,12 +355,13 @@ export default function QueryBuilder({ table }: Props) {
                     <Space direction="vertical" style={{ width: '100%', marginTop: 8 }} size={6}>
                         {filters.map((f, i) => (
                             <Space key={i} size={6} wrap>
-                                <Input
+                                <AutoComplete
                                     placeholder="Attribute"
                                     value={f.attr}
-                                    onChange={e => updateFilter(i, { attr: e.target.value })}
+                                    options={knownAttributes.map(a => ({ value: a }))}
+                                    onChange={val => updateFilter(i, { attr: val })}
                                     size="small"
-                                    style={{ width: 140 }}
+                                    style={{ width: 150 }}
                                 />
                                 <Select value={f.op} onChange={v => updateFilter(i, { op: v })} size="small" style={{ width: 140 }}>
                                     {FILTER_OPS.map(op => <Option key={op} value={op}>{op}</Option>)}
@@ -322,19 +394,29 @@ export default function QueryBuilder({ table }: Props) {
                 >
                     Run Query
                 </Button>
-                <Button icon={<PlusOutlined />} size="small" onClick={addFilter}>
-                    Add Filter
-                </Button>
                 {lastEvaluatedKey && (
-                    <Button size="small" onClick={() => run(true)} loading={loading}>
+                    <Button
+                        onClick={() => run(true)}
+                        loading={loading}
+                        size="small"
+                    >
                         Load More
                     </Button>
                 )}
-                <Tooltip title="Export results as JSON">
-                    <Button icon={<DownloadOutlined />} size="small" onClick={exportResults}>
-                        Export
-                    </Button>
-                </Tooltip>
+                <Button
+                    icon={<PlusOutlined />}
+                    onClick={addFilter}
+                    size="small"
+                >
+                    Add Filter
+                </Button>
+                <Button
+                    icon={<DownloadOutlined />}
+                    onClick={exportResults}
+                    size="small"
+                >
+                    Export JSON
+                </Button>
             </Space>
         </div>
     )

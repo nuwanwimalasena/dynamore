@@ -1381,7 +1381,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "dynamore"
-version = "2.1.1"
+version = "2.2.0"
 dependencies = [
  "aws-config",
  "aws-credential-types",
@@ -1400,6 +1400,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-store",
  "tauri-plugin-updater",
+ "thiserror 1.0.69",
  "tokio",
 ]
 

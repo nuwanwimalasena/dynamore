@@ -19,16 +19,37 @@ export interface AWSRole {
 }
 
 export interface TableDescription {
+    tableName?: string
     TableName?: string
+    tableStatus?: string
     TableStatus?: string
+    itemCount?: number
     ItemCount?: number
+    tableSizeBytes?: number
     TableSizeBytes?: number
-    BillingModeSummary?: { BillingMode?: string }
-    ProvisionedThroughput?: { ReadCapacityUnits?: number; WriteCapacityUnits?: number }
-    KeySchema?: Array<{ AttributeName: string; KeyType: string }>
-    AttributeDefinitions?: Array<{ AttributeName: string; AttributeType: string }>
+    billingModeSummary?: { billingMode?: string; BillingMode?: string }
+    BillingModeSummary?: { billingMode?: string; BillingMode?: string }
+    provisionedThroughput?: {
+        readCapacityUnits?: number
+        writeCapacityUnits?: number
+        ReadCapacityUnits?: number
+        WriteCapacityUnits?: number
+    }
+    ProvisionedThroughput?: {
+        readCapacityUnits?: number
+        writeCapacityUnits?: number
+        ReadCapacityUnits?: number
+        WriteCapacityUnits?: number
+    }
+    keySchema?: Array<{ attributeName?: string; AttributeName?: string; keyType?: string; KeyType?: string }>
+    KeySchema?: Array<{ attributeName?: string; AttributeName?: string; keyType?: string; KeyType?: string }>
+    attributeDefinitions?: Array<{ attributeName?: string; AttributeName?: string; attributeType?: string; AttributeType?: string }>
+    AttributeDefinitions?: Array<{ attributeName?: string; AttributeName?: string; attributeType?: string; AttributeType?: string }>
+    globalSecondaryIndexes?: unknown[]
     GlobalSecondaryIndexes?: unknown[]
+    localSecondaryIndexes?: unknown[]
     LocalSecondaryIndexes?: unknown[]
+    creationDateTime?: string
     CreationDateTime?: string
 }
 
@@ -45,10 +66,17 @@ declare global {
     interface Window {
         api: {
             auth: {
-                initSSO: (params: {
-                    startUrl: string
+                initSSO: (params: { startUrl: string; region?: string }) => Promise<{
+                    deviceCode: string
+                    userCode: string
+                    verificationUri: string
+                    verificationUriComplete: string
+                    expiresIn: number
+                    interval: number
+                    clientId: string
+                    clientSecret: string
                     region: string
-                }) => Promise<{ clientId: string; clientSecret: string; deviceCode: string; interval: number; expiresAt: number; startUrl: string; region: string }>
+                }>
                 pollSSOToken: (params: {
                     region: string
                     clientId: string
@@ -56,7 +84,7 @@ declare global {
                     deviceCode: string
                     interval: number
                     expiresAt: number
-                }) => Promise<{ accessToken: string }>
+                }) => Promise<{ accessToken: string; expiresIn: number }>
                 listSSOAccounts: (params: {
                     accessToken: string
                     region: string
@@ -68,7 +96,8 @@ declare global {
                 }) => Promise<{ roles: AWSRole[] }>
                 completeSSOLogin: (params: {
                     accessToken: string
-                    region: string
+                    region?: string
+                    ssoRegion?: string
                     accountId: string
                     roleName: string
                     startUrl: string
@@ -77,8 +106,9 @@ declare global {
                     accessKeyId: string
                     secretAccessKey: string
                     sessionToken?: string
-                    region: string
-                }) => Promise<{ success: boolean; error?: string; region: string }>
+                    region?: string
+                }) => Promise<{ success: boolean; error?: string; region?: string }>
+                switchRegion: (region: string) => Promise<{ success: boolean; region: string }>
                 logout: () => Promise<{ success: boolean }>
                 getSession: () => Promise<Session | null>
                 getLastSSOConfig: () => Promise<{ startUrl: string; region: string; accountId: string; roleName: string } | null>

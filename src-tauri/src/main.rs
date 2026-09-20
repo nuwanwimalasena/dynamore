@@ -3,6 +3,9 @@
 
 mod aws_client;
 mod commands;
+pub mod error;
+pub mod models;
+pub mod services;
 
 fn main() {
     tauri::Builder::default()
@@ -19,6 +22,7 @@ fn main() {
             commands::auth::auth_list_sso_account_roles,
             commands::auth::auth_complete_sso_login,
             commands::auth::auth_login_with_keys,
+            commands::auth::auth_switch_region,
             commands::auth::auth_logout,
             commands::auth::auth_get_session,
             commands::auth::auth_get_last_sso_config,

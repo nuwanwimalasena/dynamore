@@ -7,9 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State, Window};
 use tauri_plugin_store::StoreExt;
 
-use crate::aws_client::{
-    sanitize_error_message, AwsClientState, SessionCredentials, SessionData,
-};
+use crate::aws_client::{sanitize_error_message, AwsClientState, SessionCredentials, SessionData};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -84,14 +82,17 @@ pub async fn auth_init_sso(
     app: AppHandle,
     window: Window,
     start_url: String,
-    region: String,
+    region: Option<String>,
 ) -> Result<SsoInitResponse, String> {
     let start_url = clean_start_url(&start_url);
+    let effective_region = region
+        .filter(|r| !r.trim().is_empty())
+        .unwrap_or_else(|| "us-east-1".to_string());
 
     let store = app.store("dynamore-config").map_err(|e| e.to_string())?;
     let config = LastSsoConfig {
         start_url: start_url.clone(),
-        region: region.clone(),
+        region: effective_region.clone(),
         account_id: "".to_string(),
         role_name: "".to_string(),
     };
@@ -102,7 +103,7 @@ pub async fn auth_init_sso(
 
     send_progress(&window, "registering", "Registering with AWS SSO…");
 
-    let mut active_region = region.clone();
+    let mut active_region = effective_region.clone();
     let mut oidc_client = create_sso_oidc_client(&active_region).await;
 
     let mut register_res = oidc_client
@@ -129,10 +130,7 @@ pub async fn auth_init_sso(
 
     let register_res = register_res.map_err(|e| format!("SSO registration error: {}", e))?;
     let client_id = register_res.client_id().unwrap_or_default().to_string();
-    let client_secret = register_res
-        .client_secret()
-        .unwrap_or_default()
-        .to_string();
+    let client_secret = register_res.client_secret().unwrap_or_default().to_string();
 
     send_progress(&window, "authorizing", "Opening browser for sign-in…");
 
@@ -227,7 +225,11 @@ pub async fn auth_poll_sso_token(
     interval: u64,
     expires_at: u64,
 ) -> Result<SsoTokenResponse, String> {
-    send_progress(&window, "polling", "Waiting for browser sign-in to complete…");
+    send_progress(
+        &window,
+        "polling",
+        "Waiting for browser sign-in to complete…",
+    );
 
     let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .region(SsoOidcRegion::new(region.clone()))
@@ -417,13 +419,19 @@ pub async fn auth_complete_sso_login(
     state: State<'_, AwsClientState>,
     app: AppHandle,
     access_token: String,
-    region: String,
+    region: Option<String>,
     sso_region: Option<String>,
     account_id: String,
     role_name: String,
     start_url: String,
 ) -> Result<CompleteSsoLoginResponse, String> {
-    let portal_region = sso_region.as_deref().unwrap_or(&region);
+    let effective_region = region
+        .filter(|r| !r.trim().is_empty())
+        .unwrap_or_else(|| "us-east-1".to_string());
+    let portal_region = sso_region
+        .as_deref()
+        .filter(|r| !r.trim().is_empty())
+        .unwrap_or(&effective_region);
     let sso_client = create_sso_client(portal_region).await;
 
     let mut res = sso_client
@@ -467,7 +475,7 @@ pub async fn auth_complete_sso_login(
             expiration: Some(creds.expiration() as u64),
         }),
         start_url: Some(start_url.clone()),
-        region: region.clone(),
+        region: effective_region.clone(),
         account_id: Some(account_id.clone()),
         role_name: Some(role_name.clone()),
     };
@@ -481,7 +489,7 @@ pub async fn auth_complete_sso_login(
     let config_store = app.store("dynamore-config").map_err(|e| e.to_string())?;
     let config = LastSsoConfig {
         start_url,
-        region: region.clone(),
+        region: effective_region.clone(),
         account_id: account_id.clone(),
         role_name: role_name.clone(),
     };
@@ -497,7 +505,7 @@ pub async fn auth_complete_sso_login(
         success: true,
         account_id,
         role_name,
-        region,
+        region: effective_region,
     })
 }
 
@@ -578,7 +586,7 @@ pub async fn auth_login_with_keys(
     access_key_id: String,
     secret_access_key: String,
     session_token: Option<String>,
-    region: String,
+    region: Option<String>,
 ) -> Result<LoginWithKeysResponse, String> {
     let clean_session_token = session_token.clone().filter(|s| !s.trim().is_empty());
 
@@ -590,11 +598,9 @@ pub async fn auth_login_with_keys(
         "dynamore",
     );
 
-    let region_str = if region.trim().is_empty() {
-        "us-east-1".to_string()
-    } else {
-        region.trim().to_string()
-    };
+    let region_str = region
+        .filter(|r| !r.trim().is_empty())
+        .unwrap_or_else(|| "us-east-1".to_string());
 
     let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .region(StsRegion::new(region_str.clone()))
@@ -645,6 +651,57 @@ pub async fn auth_login_with_keys(
             })
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SwitchRegionResponse {
+    pub success: bool,
+    pub region: String,
+}
+
+#[tauri::command]
+pub async fn auth_switch_region(
+    state: State<'_, AwsClientState>,
+    app: AppHandle,
+    region: String,
+) -> Result<SwitchRegionResponse, String> {
+    let target_region = if region.trim().is_empty() {
+        "us-east-1".to_string()
+    } else {
+        region.trim().to_string()
+    };
+
+    let auth_store = app.store("dynamore-auth").map_err(|e| e.to_string())?;
+    let session_val = auth_store
+        .get("session")
+        .ok_or_else(|| "No active session found".to_string())?;
+
+    let mut session: SessionData =
+        serde_json::from_value(session_val).map_err(|e| e.to_string())?;
+    session.region = target_region.clone();
+    auth_store.set(
+        "session",
+        serde_json::to_value(&session).map_err(|e| e.to_string())?,
+    );
+
+    let config_store = app.store("dynamore-config").map_err(|e| e.to_string())?;
+    if let Some(config_val) = config_store.get("lastSSOConfig") {
+        if let Ok(mut config) = serde_json::from_value::<LastSsoConfig>(config_val) {
+            config.region = target_region.clone();
+            let _ = config_store.set(
+                "lastSSOConfig",
+                serde_json::to_value(&config).unwrap_or_default(),
+            );
+        }
+    }
+
+    state.invalidate().await;
+
+    Ok(SwitchRegionResponse {
+        success: true,
+        region: target_region,
+    })
 }
 
 #[derive(Debug, Serialize, Deserialize)]

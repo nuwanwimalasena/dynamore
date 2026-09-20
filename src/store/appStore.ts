@@ -55,9 +55,11 @@ export const useAppStore = create<AppStore>((set) => ({
     setActiveTab: (activeTab) => set({ activeTab }),
     selectedItem: null,
     setSelectedItem: (selectedItem) => set({ selectedItem }),
-    theme: (localStorage.getItem('theme') as 'light' | 'dark') || 'dark',
+    theme: (typeof localStorage !== 'undefined' ? (localStorage.getItem('theme') as 'light' | 'dark') : null) || 'dark',
     setTheme: (theme) => {
-        localStorage.setItem('theme', theme)
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('theme', theme)
+        }
         set({ theme })
     }
 }))

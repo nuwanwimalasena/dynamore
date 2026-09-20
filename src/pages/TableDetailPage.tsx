@@ -40,9 +40,18 @@ export default function TableDetailPage() {
         )
     }
 
-    const keySchema = table.KeySchema ?? []
-    const gsiList = (table.GlobalSecondaryIndexes ?? []) as Array<{ IndexName?: string; KeySchema?: unknown[]; ItemCount?: number }>
-    const lsiList = (table.LocalSecondaryIndexes ?? []) as Array<{ IndexName?: string }>
+    const tableName = (table as any).tableName ?? (table as any).TableName ?? ''
+    const tableStatus = (table as any).tableStatus ?? (table as any).TableStatus ?? ''
+    const itemCount = (table as any).itemCount ?? (table as any).ItemCount
+    const tableSizeBytes = (table as any).tableSizeBytes ?? (table as any).TableSizeBytes
+    const billingMode = (table as any).billingModeSummary?.billingMode ?? (table as any).BillingModeSummary?.BillingMode ?? 'PROVISIONED'
+    const throughput = (table as any).provisionedThroughput ?? (table as any).ProvisionedThroughput
+    const creationDate = (table as any).creationDateTime ?? (table as any).CreationDateTime
+
+    const keySchema = ((table as any).keySchema ?? (table as any).KeySchema ?? []) as Array<{ attributeName?: string; AttributeName?: string; keyType?: string; KeyType?: string }>
+    const attributeDefs = ((table as any).attributeDefinitions ?? (table as any).AttributeDefinitions ?? []) as Array<{ attributeName?: string; AttributeName?: string; attributeType?: string; AttributeType?: string }>
+    const gsiList = (((table as any).globalSecondaryIndexes ?? (table as any).GlobalSecondaryIndexes ?? [])) as Array<{ indexName?: string; IndexName?: string; keySchema?: any[]; KeySchema?: any[] }>
+    const lsiList = (((table as any).localSecondaryIndexes ?? (table as any).LocalSecondaryIndexes ?? [])) as Array<{ indexName?: string; IndexName?: string }>
 
     const infoContent = (
         <div style={{ padding: '16px 20px', overflow: 'auto', flex: 1 }}>
@@ -53,34 +62,34 @@ export default function TableDetailPage() {
                 labelStyle={{ color: 'var(--color-text-secondary)', fontSize: 12 }}
                 contentStyle={{ color: 'var(--color-text-primary)', fontSize: 13 }}
             >
-                <Descriptions.Item label="Table Name" span={2}>{table.TableName}</Descriptions.Item>
+                <Descriptions.Item label="Table Name" span={2}>{tableName}</Descriptions.Item>
                 <Descriptions.Item label="Status">
-                    <Tag color={table.TableStatus === 'ACTIVE' ? 'green' : 'orange'}>{table.TableStatus}</Tag>
+                    <Tag color={tableStatus === 'ACTIVE' ? 'green' : 'orange'}>{tableStatus || '—'}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Item Count">
-                    {table.ItemCount?.toLocaleString() ?? '—'}
+                    {itemCount !== undefined ? Number(itemCount).toLocaleString() : '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Size">
-                    {table.TableSizeBytes !== undefined
-                        ? `${(table.TableSizeBytes / 1024).toFixed(1)} KB`
+                    {tableSizeBytes !== undefined
+                        ? `${(Number(tableSizeBytes) / 1024).toFixed(1)} KB`
                         : '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Billing">
-                    {table.BillingModeSummary?.BillingMode ?? 'PROVISIONED'}
+                    {billingMode}
                 </Descriptions.Item>
-                {table.ProvisionedThroughput && (
+                {throughput && (
                     <>
                         <Descriptions.Item label="Read Capacity">
-                            {table.ProvisionedThroughput.ReadCapacityUnits}
+                            {throughput.readCapacityUnits ?? throughput.ReadCapacityUnits ?? 0}
                         </Descriptions.Item>
                         <Descriptions.Item label="Write Capacity">
-                            {table.ProvisionedThroughput.WriteCapacityUnits}
+                            {throughput.writeCapacityUnits ?? throughput.WriteCapacityUnits ?? 0}
                         </Descriptions.Item>
                     </>
                 )}
                 <Descriptions.Item label="Created" span={2}>
-                    {table.CreationDateTime
-                        ? new Date(table.CreationDateTime).toLocaleString()
+                    {creationDate
+                        ? new Date(creationDate).toLocaleString()
                         : '—'}
                 </Descriptions.Item>
             </Descriptions>
@@ -90,11 +99,15 @@ export default function TableDetailPage() {
                 Key Schema
             </Title>
             <Space wrap>
-                {keySchema.map(k => (
-                    <Tag key={k.AttributeName} color={k.KeyType === 'HASH' ? 'blue' : 'cyan'}>
-                        {k.AttributeName} ({k.KeyType})
-                    </Tag>
-                ))}
+                {keySchema.map(k => {
+                    const name = k.attributeName ?? k.AttributeName ?? ''
+                    const type = k.keyType ?? k.KeyType ?? ''
+                    return (
+                        <Tag key={name} color={type === 'HASH' ? 'blue' : 'cyan'}>
+                            {name} ({type})
+                        </Tag>
+                    )
+                })}
             </Space>
 
             {/* Attributes */}
@@ -102,9 +115,13 @@ export default function TableDetailPage() {
                 Attribute Definitions
             </Title>
             <Space wrap>
-                {(table.AttributeDefinitions ?? []).map((a: { AttributeName: string; AttributeType: string }) => (
-                    <Tag key={a.AttributeName}>{a.AttributeName} ({a.AttributeType})</Tag>
-                ))}
+                {attributeDefs.map(a => {
+                    const name = a.attributeName ?? a.AttributeName ?? ''
+                    const type = a.attributeType ?? a.AttributeType ?? ''
+                    return (
+                        <Tag key={name}>{name} ({type})</Tag>
+                    )
+                })}
             </Space>
 
             {/* GSIs */}
