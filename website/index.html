@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamore v2 | The Ultimate DynamoDB Desktop Client</title>
+    <title>Dynamore v2.2 | The Ultimate DynamoDB Desktop Client</title>
     <meta name="description"
-        content="A sleek, high-performance DynamoDB desktop client powered by Tauri v2 and Rust. Manage tables, query data, and edit JSON items with ease.">
+        content="A sleek, high-performance DynamoDB desktop client powered by Tauri v2 and Rust. Manage tables, query data with GSI/LSI support, switch 29 AWS regions dynamically, and edit JSON items with ease.">
+    <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,15 +18,15 @@
 <body>
     <nav class="glass">
         <div class="container nav-content">
-            <div class="logo">
+            <a href="#" class="logo">
                 <img src="logo.png" alt="Dynamore Logo" class="logo-img">
-                <span class="logo-text">Dynamore <span class="badge">v2.0</span></span>
-            </div>
+                <span class="logo-text">Dynamore <span class="badge">v2.2.1</span></span>
+            </a>
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#benchmarks">Performance</a>
                 <a href="https://github.com/nuwanwimalasena/dynamore" target="_blank" rel="noopener" class="btn btn-secondary">GitHub</a>
-                <a href="#download" class="btn btn-primary">Download v2.0</a>
+                <a href="#download" class="btn btn-primary">Download v2.2.1</a>
             </div>
         </div>
     </nav>
@@ -36,9 +37,9 @@
                 <span class="pulse-dot"></span> Powered by Tauri v2 & Rust Native Engine
             </div>
             <h1 class="fade-in">DynamoDB Management, <span class="gradient-text">Reimagined.</span></h1>
-            <p class="hero-subtitle fade-in">A sleek, ultra-fast desktop client engineered for AWS power users. Instant startup, sub-millisecond query execution, and zero bloat.</p>
+            <p class="hero-subtitle fade-in">A sleek, ultra-fast desktop client engineered for AWS power users. Instant startup, 29 dynamic regions, sub-millisecond query execution, and zero bloat.</p>
             <div class="hero-actions fade-in">
-                <a href="#download" class="btn btn-lg btn-primary">Download for Desktop</a>
+                <a href="#download" class="btn btn-lg btn-primary">Download v2.2.1</a>
                 <a href="https://github.com/nuwanwimalasena/dynamore" target="_blank" rel="noopener" class="btn btn-lg btn-outline">Explore on GitHub</a>
             </div>
             <div class="hero-mockup fade-in-up">
@@ -52,37 +53,37 @@
     <section id="features" class="features">
         <div class="container">
             <h2 class="section-title">Engineered for Maximum Developer Velocity</h2>
-            <p class="section-subtitle">Everything you need to inspect, query, and manage DynamoDB tables with effortless precision.</p>
+            <p class="section-subtitle">Everything you need to inspect, query, and manage DynamoDB tables across global AWS infrastructure with effortless precision.</p>
             <div class="features-grid">
                 <div class="feature-card glass">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Dynamic Region Switcher</h3>
+                    <p>Switch between 29 AWS regions on the fly directly from the global navbar without logging out or reconnecting.</p>
+                </div>
+                <div class="feature-card glass">
                     <div class="feature-icon">🔐</div>
-                    <h3>AWS SSO Native</h3>
-                    <p>Connect seamlessly using your AWS Identity Center profiles with automatic credential refreshing.</p>
+                    <h3>AWS SSO & IAM Auth</h3>
+                    <p>Connect seamlessly using your AWS IAM Identity Center profiles with auto-refresh, or direct Access/Secret keys with STS validation.</p>
                 </div>
                 <div class="feature-card glass">
                     <div class="feature-icon">⚡</div>
-                    <h3>Tauri v2 Core</h3>
-                    <p>Consumes up to 90% less RAM than legacy Electron clients with instant application cold starts.</p>
+                    <h3>Tauri v2 Native Rust Core</h3>
+                    <p>Consumes up to 90% less RAM than legacy Electron tools with sub-second application cold starts and zero runtime bloat.</p>
                 </div>
                 <div class="feature-card glass">
                     <div class="feature-icon">🔍</div>
                     <h3>Advanced Query & Scan</h3>
-                    <p>Build complex Partition and Sort key expressions with visual filter rules and pagination.</p>
+                    <p>Visual expression builder for Partition and Sort keys, Global and Local Secondary Indexes (GSI/LSI), and real-time pagination.</p>
                 </div>
                 <div class="feature-card glass">
                     <div class="feature-icon">📝</div>
                     <h3>JSON & Tree Item Editor</h3>
-                    <p>Edit DynamoDB attributes directly with full schema validation and auto-type conversion.</p>
+                    <p>Edit DynamoDB attributes directly with full schema validation, support for Sets (SS, NS, BS), and batch deletion.</p>
                 </div>
                 <div class="feature-card glass">
                     <div class="feature-icon">🏗️</div>
                     <h3>Table Wizard</h3>
-                    <p>Create and configure DynamoDB tables, GSI/LSI indexes, and provisioned throughput in seconds.</p>
-                </div>
-                <div class="feature-card glass">
-                    <div class="feature-icon">🎨</div>
-                    <h3>Glassmorphic Dark UI</h3>
-                    <p>Modern dark-mode design tailored for low eye strain during long coding and debugging sessions.</p>
+                    <p>Create and configure DynamoDB tables, custom primary keys, GSI/LSI indexes, and provisioned or on-demand billing in seconds.</p>
                 </div>
             </div>
         </div>
@@ -102,6 +103,10 @@
                         <span class="stat-label">App Launch Time</span>
                     </div>
                     <div class="stat-item">
+                        <span class="stat-value">29</span>
+                        <span class="stat-label">AWS Regions Supported</span>
+                    </div>
+                    <div class="stat-item">
                         <span class="stat-value">100%</span>
                         <span class="stat-label">Rust Safe Core</span>
                     </div>
@@ -112,26 +117,47 @@
 
     <section id="download" class="download">
         <div class="container download-container glass">
-            <h2>Get Dynamore v2.0 for Desktop</h2>
-            <p>Cross-platform support for macOS, Windows, and Linux.</p>
+            <h2>Get Dynamore v2.2.1 for Desktop</h2>
+            <p>Direct standalone installers and official package manager commands.</p>
             <div class="download-platforms">
                 <div class="platform">
                     <span class="platform-icon">🍎</span>
-                    <a href="https://github.com/nuwanwimalasena/dynamore/releases/latest"
-                        class="btn btn-primary" target="_blank" rel="noopener">Download for macOS</a>
-                    <span class="platform-note">Apple Silicon & Intel</span>
+                    <h3>macOS</h3>
+                    <span class="platform-note">Apple Silicon (M1/M2/M3/M4)</span>
+                    <div class="download-buttons-group">
+                        <a href="https://github.com/nuwanwimalasena/dynamore/releases/download/v2.2.1/dynamore_2.2.1_aarch64.dmg"
+                            class="btn btn-primary" target="_blank" rel="noopener">Direct .DMG</a>
+                    </div>
                 </div>
                 <div class="platform">
                     <span class="platform-icon">🪟</span>
-                    <a href="https://github.com/nuwanwimalasena/dynamore/releases/latest"
-                        class="btn btn-primary" target="_blank" rel="noopener">Download for Windows</a>
-                    <span class="platform-note">64-bit Installer / MSI</span>
+                    <h3>Windows</h3>
+                    <span class="platform-note">Windows 10 / 11 (64-bit)</span>
+                    <div class="download-buttons-group">
+                        <a href="https://github.com/nuwanwimalasena/dynamore/releases/download/v2.2.1/dynamore_2.2.1_x64-setup.exe"
+                            class="btn btn-primary" target="_blank" rel="noopener">Setup .EXE</a>
+                        <a href="https://github.com/nuwanwimalasena/dynamore/releases/download/v2.2.1/dynamore_2.2.1_x64_en-US.msi"
+                            class="btn btn-secondary" target="_blank" rel="noopener">.MSI</a>
+                    </div>
+                    <div class="cli-box" data-copy="winget install NuwanWimalasena.Dynamore" title="Click to copy winget command">
+                        <code>winget install NuwanWimalasena.Dynamore</code>
+                        <span class="cli-copy-icon">📋</span>
+                    </div>
                 </div>
                 <div class="platform">
                     <span class="platform-icon">🐧</span>
-                    <a href="https://github.com/nuwanwimalasena/dynamore/releases/latest"
-                        class="btn btn-secondary" target="_blank" rel="noopener">Download for Linux</a>
-                    <span class="platform-note">AppImage / DEB</span>
+                    <h3>Linux</h3>
+                    <span class="platform-note">Ubuntu, Debian, Fedora & distros</span>
+                    <div class="download-buttons-group">
+                        <a href="https://github.com/nuwanwimalasena/dynamore/releases/download/v2.2.1/dynamore_2.2.1_amd64.deb"
+                            class="btn btn-primary" target="_blank" rel="noopener">.DEB</a>
+                        <a href="https://github.com/nuwanwimalasena/dynamore/releases/download/v2.2.1/dynamore_2.2.1_amd64.AppImage"
+                            class="btn btn-secondary" target="_blank" rel="noopener">AppImage</a>
+                    </div>
+                    <div class="cli-box" data-copy="sudo snap install dynamore" title="Click to copy snap command">
+                        <code>sudo snap install dynamore</code>
+                        <span class="cli-copy-icon">📋</span>
+                    </div>
                 </div>
             </div>
         </div>
