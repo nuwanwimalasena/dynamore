@@ -1,16 +1,18 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Typography, Button, Tooltip, App as AntApp } from 'antd'
-import { LogoutOutlined, CloudServerOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons'
+import { Typography, Button, Tooltip, App as AntApp, Select } from 'antd'
+import { LogoutOutlined, CloudServerOutlined, SunOutlined, MoonOutlined, GlobalOutlined } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
+import { AWS_REGIONS } from '../constants/regions'
 import Sidebar from '../components/Sidebar'
 import TableDetailPage from './TableDetailPage'
 
 const { Text } = Typography
 
 export default function MainLayout() {
-    const { session, setSession, setTableNames, theme, setTheme } = useAppStore()
+    const { session, setSession, setTableNames, setSelectedTable, theme, setTheme } = useAppStore()
     const { message } = AntApp.useApp()
+    const [switchingRegion, setSwitchingRegion] = useState(false)
 
     const [sidebarWidth, setSidebarWidth] = useState(() => {
         const saved = localStorage.getItem('sidebarWidth')
@@ -58,6 +60,26 @@ export default function MainLayout() {
         setTableNames([])
     }, [setSession, setTableNames])
 
+    const handleRegionChange = async (newRegion: string) => {
+        if (!session || newRegion === session.region || switchingRegion) return
+        setSwitchingRegion(true)
+        try {
+            const res = await window.api.auth.switchRegion(newRegion)
+            if (res.success) {
+                setSession({
+                    ...session,
+                    region: res.region
+                })
+                setSelectedTable(null)
+                message.success(`Switched region to ${res.region}`)
+            }
+        } catch (err: any) {
+            message.error(typeof err === 'string' ? err : err?.message ?? 'Failed to switch region')
+        } finally {
+            setSwitchingRegion(false)
+        }
+    }
+
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout>
         if (session) {
@@ -86,9 +108,28 @@ export default function MainLayout() {
 
                 {session && (
                     <div className="titlebar-nodrag" style={{ display: 'flex', alignItems: 'center', gap: 12, paddingRight: 16 }}>
-                        <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                            {session.accountId} / {session.roleName} / {session.region}
-                        </Text>
+                        {(session.accountId || session.roleName) && (
+                            <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                                {[session.accountId, session.roleName].filter(Boolean).join(' / ')}
+                            </Text>
+                        )}
+
+                        <Select
+                            size="small"
+                            value={session.region || 'us-east-1'}
+                            onChange={handleRegionChange}
+                            loading={switchingRegion}
+                            showSearch
+                            optionFilterProp="label"
+                            suffixIcon={<GlobalOutlined style={{ color: 'var(--color-accent-blue)' }} />}
+                            style={{ width: 230 }}
+                            options={AWS_REGIONS}
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                                (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        />
+
                         <Tooltip title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
                             <Button
                                 type="text"

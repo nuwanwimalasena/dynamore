@@ -75,7 +75,7 @@ function rowsToObject(rows: KeyValueRow[]): Record<string, unknown> {
 }
 
 export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
-    const { selectedTable, queryResults, scanResults, setQueryResults, setScanResults } = useAppStore()
+    const { selectedTable, tableDetails, queryResults, scanResults, setQueryResults, setScanResults } = useAppStore()
     const { message } = AntApp.useApp()
     const [json, setJson] = useState('')
     const [jsonError, setJsonError] = useState('')
@@ -86,13 +86,26 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
 
     useEffect(() => {
         if (open) {
-            const initialObj = item ? item : { id: '' }
+            let initialObj = item
+            if (!initialObj) {
+                const currentTable = selectedTable ? tableDetails[selectedTable] : undefined
+                const keySchema = (currentTable as any)?.keySchema ?? (currentTable as any)?.KeySchema ?? []
+                if (keySchema.length > 0) {
+                    initialObj = {}
+                    for (const k of keySchema) {
+                        const name = k.attributeName ?? k.AttributeName ?? k.attribute_name
+                        if (name) (initialObj as Record<string, unknown>)[name] = ''
+                    }
+                } else {
+                    initialObj = { id: '' }
+                }
+            }
             setJson(JSON.stringify(initialObj, null, 2))
             setRows(objectToRows(initialObj))
             setJsonError('')
             setActiveTabKey('kv')
         }
-    }, [open, item])
+    }, [open, item, selectedTable, tableDetails])
 
     const handleJsonChange = (val: string) => {
         setJson(val)
@@ -179,7 +192,7 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', paddingRight: 4 }}>
                         {rows.map((row, i) => (
-                            <Space key={i} style={{ display: 'flex', width: '100%', marginBottom: 12, alignItems: 'flex-start' }} align="baseline">
+                            <Space key={i} style={{ width: '100%', marginBottom: 8 }} align="start">
                                 <Input
                                     placeholder="Attribute Name"
                                     value={row.key}
@@ -189,7 +202,7 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
                                 <Select
                                     value={row.type}
                                     onChange={v => handleUpdateRow(i, { type: v })}
-                                    style={{ width: 100 }}
+                                    style={{ width: 105 }}
                                 >
                                     <Option value="string">String</Option>
                                     <Option value="number">Number</Option>
@@ -198,8 +211,8 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
                                     <Option value="list">List</Option>
                                     <Option value="map">Map</Option>
                                 </Select>
-                                <div style={{ flex: 1, minWidth: 150 }}>
-                                    {row.type === 'boolean' && (
+                                <div style={{ flex: 1, minWidth: 160 }}>
+                                    {row.type === 'boolean' ? (
                                         <Select
                                             value={row.value}
                                             onChange={v => handleUpdateRow(i, { value: v })}
@@ -208,14 +221,12 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
                                             <Option value={true}>true</Option>
                                             <Option value={false}>false</Option>
                                         </Select>
-                                    )}
-                                    {row.type === 'null' && (
-                                        <Input value="null" disabled style={{ width: '100%' }} />
-                                    )}
-                                    {row.type !== 'boolean' && row.type !== 'null' && (
+                                    ) : row.type === 'null' ? (
+                                        <Input disabled value="null" style={{ width: '100%' }} />
+                                    ) : (
                                         <Input
-                                            placeholder={row.type === 'list' ? 'JSON Array: [1, 2]' : row.type === 'map' ? 'JSON Object: {"a": 1}' : 'Value'}
-                                            value={row.value}
+                                            placeholder={row.type === 'list' ? '["item1", "item2"]' : row.type === 'map' ? '{"key": "val"}' : 'Value'}
+                                            value={row.value ?? ''}
                                             onChange={e => handleUpdateRow(i, { value: e.target.value })}
                                             style={{ width: '100%' }}
                                         />
@@ -302,22 +313,20 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
                     )}
                 </Space>
             }
-            placement="right"
-            width={560}
             open={open}
             onClose={onClose}
-            resizable
+            width={580}
             extra={
                 <Space>
-                    <Button onClick={onClose}>Cancel</Button>
+                    <Button onClick={onClose} size="small">Cancel</Button>
                     <Button
                         type="primary"
                         icon={<SaveOutlined />}
                         onClick={handleSave}
                         loading={saving}
-                        disabled={!!jsonError}
+                        size="small"
                     >
-                        {isNew ? 'Create Item' : 'Save Changes'}
+                        Save
                     </Button>
                 </Space>
             }
@@ -327,6 +336,7 @@ export default function ItemEditor({ open, item, onClose, onSaved }: Props) {
                 onChange={setActiveTabKey}
                 items={tabItems}
                 size="small"
+                style={{ marginTop: -12 }}
             />
         </Drawer>
     )

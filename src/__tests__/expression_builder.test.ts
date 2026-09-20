@@ -7,20 +7,40 @@ interface FilterRow {
     val2?: string
 }
 
-function buildExpression(filters: FilterRow[], attrNames: Record<string, string>, attrValues: Record<string, unknown>, prefix: string) {
+function parseAttrVal(val: string, attrType?: string): unknown {
+    if (attrType === 'N' || (!attrType && !isNaN(Number(val)) && val.trim() !== '')) {
+        return Number(val)
+    }
+    if (attrType === 'BOOL' || val === 'true' || val === 'false') {
+        if (val === 'true') return true
+        if (val === 'false') return false
+    }
+    return val
+}
+
+function buildExpression(
+    filters: FilterRow[],
+    attrNames: Record<string, string>,
+    attrValues: Record<string, unknown>,
+    prefix: string,
+    attrTypes: Record<string, string> = {}
+) {
     const parts: string[] = []
     filters.forEach((f, i) => {
         if (!f.attr) return
         const nKey = `#${prefix}attr${i}`
         const vKey = `:${prefix}val${i}`
         attrNames[nKey] = f.attr
+
+        const parsedVal = parseAttrVal(f.val, attrTypes[f.attr])
+
         if (f.op === 'attribute_exists' || f.op === 'attribute_not_exists') {
             parts.push(`${f.op}(${nKey})`)
         } else if (f.op === 'begins_with' || f.op === 'contains') {
             attrValues[vKey] = f.val
             parts.push(`${f.op}(${nKey}, ${vKey})`)
         } else {
-            attrValues[vKey] = f.val
+            attrValues[vKey] = parsedVal
             parts.push(`${nKey} ${f.op} ${vKey}`)
         }
     })
@@ -75,5 +95,20 @@ describe('DynamoDB Expression Builder', () => {
         expect(expr).toBe('attribute_not_exists(#fattr0)')
         expect(attrNames['#fattr0']).toBe('deletedAt')
         expect(Object.keys(attrValues).length).toBe(0)
+    })
+
+    it('correctly casts numbers and booleans according to attribute schema', () => {
+        const attrNames: Record<string, string> = {}
+        const attrValues: Record<string, unknown> = {}
+        const filters: FilterRow[] = [
+            { attr: 'age', op: '>=', val: '21' },
+            { attr: 'isVerified', op: '=', val: 'true' }
+        ]
+        const attrTypes = { age: 'N', isVerified: 'BOOL' }
+
+        const expr = buildExpression(filters, attrNames, attrValues, 'f', attrTypes)
+        expect(expr).toBe('#fattr0 >= :fval0 AND #fattr1 = :fval1')
+        expect(attrValues[':fval0']).toBe(21)
+        expect(attrValues[':fval1']).toBe(true)
     })
 })

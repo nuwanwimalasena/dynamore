@@ -100,6 +100,61 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
         })
     }
 
+    // Auto-detect columns from items with primary key prioritization
+    const columns = useMemo<ColumnsType<Record<string, unknown>>>(() => {
+        const keys = new Set<string>()
+
+        // Prioritize key schema attributes first
+        const keySchema = currentTableDetail?.keySchema ?? currentTableDetail?.KeySchema ?? []
+        for (const k of keySchema) {
+            const attrName = (k as any).attributeName ?? (k as any).AttributeName
+            if (attrName) {
+                keys.add(attrName)
+            }
+        }
+
+        items.slice(0, 50).forEach(item => Object.keys(item).forEach(k => keys.add(k)))
+
+        const cols: ColumnsType<Record<string, unknown>> = [...keys].map(key => ({
+            title: key,
+            dataIndex: key,
+            key,
+            ellipsis: true,
+            width: 160,
+            render: (val) => renderCell(val)
+        }))
+
+        cols.push({
+            title: 'Actions',
+            key: '__actions',
+            fixed: 'right',
+            width: 80,
+            render: (_, record) => (
+                <Space size={4}>
+                    <Tooltip title="Edit item">
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => onEdit(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Delete item">
+                        <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleDeleteItem(record)}
+                        />
+                    </Tooltip>
+                </Space>
+            )
+        })
+
+        return cols
+    }, [items, currentTableDetail, onEdit]) // eslint-disable-line react-hooks/exhaustive-deps
+
     if (items.length === 0) {
         return (
             <Empty

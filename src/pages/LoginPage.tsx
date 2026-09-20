@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Typography, Steps, Alert, List, Select, Tooltip, Segmented } from 'antd'
+import { Form, Input, Button, Typography, Steps, Alert, List, Select, Tooltip, Segmented, Collapse } from 'antd'
 import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutlined, RightOutlined, SunOutlined, MoonOutlined, KeyOutlined } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
+import { AWS_REGIONS, DEFAULT_AWS_REGION } from '../constants/regions'
 import type { AWSAccount, AWSRole } from '../types/global'
 
 const { Title, Text, Paragraph } = Typography
@@ -10,38 +11,8 @@ type LoginStep = 'config' | 'authenticating' | 'account' | 'role' | 'completing'
 
 interface LoginFormValues {
     startUrl: string
-    region: string
+    region?: string
 }
-
-const AWS_REGIONS = [
-    { label: 'US East (N. Virginia)', value: 'us-east-1' },
-    { label: 'US East (Ohio)', value: 'us-east-2' },
-    { label: 'US West (N. California)', value: 'us-west-1' },
-    { label: 'US West (Oregon)', value: 'us-west-2' },
-    { label: 'Africa (Cape Town)', value: 'af-south-1' },
-    { label: 'Asia Pacific (Hong Kong)', value: 'ap-east-1' },
-    { label: 'Asia Pacific (Hyderabad)', value: 'ap-south-2' },
-    { label: 'Asia Pacific (Jakarta)', value: 'ap-southeast-3' },
-    { label: 'Asia Pacific (Mumbai)', value: 'ap-south-1' },
-    { label: 'Asia Pacific (Osaka)', value: 'ap-northeast-3' },
-    { label: 'Asia Pacific (Seoul)', value: 'ap-northeast-2' },
-    { label: 'Asia Pacific (Singapore)', value: 'ap-southeast-1' },
-    { label: 'Asia Pacific (Sydney)', value: 'ap-southeast-2' },
-    { label: 'Asia Pacific (Tokyo)', value: 'ap-northeast-1' },
-    { label: 'Canada (Central)', value: 'ca-central-1' },
-    { label: 'Canada West (Calgary)', value: 'ca-west-1' },
-    { label: 'Europe (Frankfurt)', value: 'eu-central-1' },
-    { label: 'Europe (Ireland)', value: 'eu-west-1' },
-    { label: 'Europe (London)', value: 'eu-west-2' },
-    { label: 'Europe (Milan)', value: 'eu-south-1' },
-    { label: 'Europe (Paris)', value: 'eu-west-3' },
-    { label: 'Europe (Spain)', value: 'eu-south-2' },
-    { label: 'Europe (Stockholm)', value: 'eu-north-1' },
-    { label: 'Europe (Zurich)', value: 'eu-central-2' },
-    { label: 'Middle East (Bahrain)', value: 'me-south-1' },
-    { label: 'Middle East (UAE)', value: 'me-central-1' },
-    { label: 'South America (São Paulo)', value: 'sa-east-1' },
-]
 
 export default function LoginPage() {
     const [form] = Form.useForm<LoginFormValues>()
@@ -66,7 +37,7 @@ export default function LoginPage() {
             if (config?.startUrl) {
                 form.setFieldsValue({
                     startUrl: config.startUrl,
-                    region: config.region || 'us-east-1'
+                    region: config.region || DEFAULT_AWS_REGION
                 })
             }
         }).catch(() => {})
@@ -99,11 +70,14 @@ export default function LoginPage() {
         setStep('authenticating')
 
         try {
-            const initRes = await window.api.auth.initSSO(values)
-            const effectiveSsoRegion = initRes.region || values.region || 'us-east-1'
+            const initRes = await window.api.auth.initSSO({
+                startUrl: values.startUrl,
+                region: values.region || DEFAULT_AWS_REGION
+            })
+            const effectiveSsoRegion = initRes.region || values.region || DEFAULT_AWS_REGION
             setSsoRegionRef(effectiveSsoRegion)
             setStartUrlRef(initRes.startUrl ?? values.startUrl)
-            setRegionRef(values.region)
+            setRegionRef(values.region || DEFAULT_AWS_REGION)
             setStatusMsg('Waiting for you to sign in via the browser…')
 
             const { accessToken } = await window.api.auth.pollSSOToken({
@@ -123,7 +97,7 @@ export default function LoginPage() {
             setAccounts(accounts)
             setStep('account')
         } catch (err) {
-            handleError(err, 'Authentication failed. Please check your SSO URL and region.')
+            handleError(err, 'Authentication failed. Please check your SSO URL.')
         } finally {
             setLoading(false)
         }
@@ -134,7 +108,7 @@ export default function LoginPage() {
         setLoading(true)
         try {
             const { roles } = await window.api.auth.listSSOAccountRoles({
-                accessToken, region: ssoRegionRef || regionRef, accountId: account.accountId
+                accessToken, region: ssoRegionRef || regionRef || DEFAULT_AWS_REGION, accountId: account.accountId
             })
             if (!roles.length) throw new Error('No roles found for this account.')
             setRoles(roles)
@@ -153,8 +127,8 @@ export default function LoginPage() {
         try {
             const res = await window.api.auth.completeSSOLogin({
                 accessToken,
-                region: regionRef,
-                ssoRegion: ssoRegionRef,
+                region: regionRef || DEFAULT_AWS_REGION,
+                ssoRegion: ssoRegionRef || DEFAULT_AWS_REGION,
                 accountId: selectedAccount!.accountId,
                 roleName: role.roleName,
                 startUrl: startUrlRef
@@ -175,9 +149,14 @@ export default function LoginPage() {
     const handleReset = async () => {
         await window.api.auth.clearSSOConfig()
         form.resetFields()
-        form.setFieldsValue({ region: 'us-east-1' })
-        setStep('config'); setErrorMsg(''); setStatusMsg('')
-        setAccessToken(''); setAccounts([]); setRoles([]); setSelectedAccount(null)
+        form.setFieldsValue({ region: DEFAULT_AWS_REGION })
+        setStep('config')
+        setErrorMsg('')
+        setStatusMsg('')
+        setAccessToken('')
+        setAccounts([])
+        setRoles([])
+        setSelectedAccount(null)
     }
 
     const handleLoginWithKeys = async (values: any) => {
@@ -186,6 +165,7 @@ export default function LoginPage() {
         try {
             const payload = {
                 ...values,
+                region: values.region || DEFAULT_AWS_REGION,
                 sessionToken: values.sessionToken?.trim() || undefined
             }
             const res = await window.api.auth.loginWithKeys(payload)
@@ -196,7 +176,7 @@ export default function LoginPage() {
                 setSession(session)
             }, 600)
         } catch (err) {
-            handleError(err, 'Authentication failed. Please check your keys and region.')
+            handleError(err, 'Authentication failed. Please check your credentials.')
         } finally {
             setLoading(false)
         }
@@ -260,19 +240,19 @@ export default function LoginPage() {
 
                     {/* Progress Steps */}
                     {authType === 'sso' && (
-                    <Steps
-                        size="small"
-                        current={stepIndex}
-                        status={step === 'error' ? 'error' : step === 'success' ? 'finish' : 'process'}
-                        style={{ marginBottom: 32 }}
-                        items={[
-                            { title: 'Connect' },
-                            { title: 'Authorize', icon: step === 'authenticating' ? <LoadingOutlined /> : undefined },
-                            { title: 'Account' },
-                            { title: 'Role' },
-                            { title: 'Done', icon: step === 'success' ? <CheckCircleOutlined /> : undefined }
-                        ]}
-                    />
+                        <Steps
+                            size="small"
+                            current={stepIndex}
+                            status={step === 'error' ? 'error' : step === 'success' ? 'finish' : 'process'}
+                            style={{ marginBottom: 32 }}
+                            items={[
+                                { title: 'Connect' },
+                                { title: 'Authorize', icon: step === 'authenticating' ? <LoadingOutlined /> : undefined },
+                                { title: 'Account' },
+                                { title: 'Role' },
+                                { title: 'Done', icon: step === 'success' ? <CheckCircleOutlined /> : undefined }
+                            ]}
+                        />
                     )}
 
                     {/* Error Alert */}
@@ -293,7 +273,7 @@ export default function LoginPage() {
                             form={form}
                             layout="vertical"
                             onFinish={handleInitSSO}
-                            initialValues={{ region: 'us-east-1' }}
+                            initialValues={{ region: DEFAULT_AWS_REGION }}
                             requiredMark={false}
                             size="large"
                         >
@@ -313,22 +293,35 @@ export default function LoginPage() {
                                 />
                             </Form.Item>
 
-                            <Form.Item
-                                label="AWS Region"
-                                name="region"
-                                rules={[{ required: true }]}
-                            >
-                                <Select
-                                    showSearch
-                                    placeholder="Select a region"
-                                    optionFilterProp="label"
-                                    options={AWS_REGIONS}
-                                    filterOption={(input, option) =>
-                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
-                                        (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
-                                    }
-                                />
-                            </Form.Item>
+                            <Collapse
+                                ghost
+                                size="small"
+                                style={{ marginBottom: 16 }}
+                                items={[{
+                                    key: 'advanced-sso',
+                                    label: <Text style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Advanced: SSO Portal Region</Text>,
+                                    children: (
+                                        <Form.Item
+                                            label="IAM Identity Center Region"
+                                            name="region"
+                                            extra="Only required if your SSO portal is in a custom region (defaults to us-east-1)"
+                                            style={{ marginBottom: 0 }}
+                                        >
+                                            <Select
+                                                showSearch
+                                                placeholder="us-east-1 (Default)"
+                                                optionFilterProp="label"
+                                                options={AWS_REGIONS}
+                                                allowClear
+                                                filterOption={(input, option) =>
+                                                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                                                    (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                                                }
+                                            />
+                                        </Form.Item>
+                                    )
+                                }]}
+                            />
 
                             <Button
                                 type="primary"
@@ -351,31 +344,48 @@ export default function LoginPage() {
                         <Form
                             layout="vertical"
                             onFinish={handleLoginWithKeys}
-                            initialValues={{ region: 'us-east-1' }}
+                            initialValues={{ region: DEFAULT_AWS_REGION }}
                             requiredMark={false}
                             size="large"
                         >
                             <Form.Item label="Access Key ID" name="accessKeyId" rules={[{ required: true, message: 'Required' }]}>
-                                <Input spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                                <Input spellCheck={false} placeholder="AKIAIOSFODNN7EXAMPLE" style={{ fontFamily: 'monospace', fontSize: 13 }} />
                             </Form.Item>
                             <Form.Item label="Secret Access Key" name="secretAccessKey" rules={[{ required: true, message: 'Required' }]}>
-                                <Input.Password spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                                <Input.Password spellCheck={false} placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" style={{ fontFamily: 'monospace', fontSize: 13 }} />
                             </Form.Item>
                             <Form.Item label="Session Token (Optional)" name="sessionToken">
-                                <Input.Password spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                                <Input.Password spellCheck={false} placeholder="Optional temporary credentials token" style={{ fontFamily: 'monospace', fontSize: 13 }} />
                             </Form.Item>
-                            <Form.Item label="AWS Region" name="region" rules={[{ required: true }]}>
-                                <Select
-                                    showSearch
-                                    placeholder="Select a region"
-                                    optionFilterProp="label"
-                                    options={AWS_REGIONS}
-                                    filterOption={(input, option) =>
-                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
-                                        (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
-                                    }
-                                />
-                            </Form.Item>
+                            <Collapse
+                                ghost
+                                size="small"
+                                style={{ marginBottom: 16 }}
+                                items={[{
+                                    key: 'advanced-keys',
+                                    label: <Text style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Advanced: Initial Region</Text>,
+                                    children: (
+                                        <Form.Item
+                                            label="Initial Region"
+                                            name="region"
+                                            extra="Default is us-east-1. You can switch regions anytime in the header."
+                                            style={{ marginBottom: 0 }}
+                                        >
+                                            <Select
+                                                showSearch
+                                                placeholder="us-east-1 (Default)"
+                                                optionFilterProp="label"
+                                                options={AWS_REGIONS}
+                                                allowClear
+                                                filterOption={(input, option) =>
+                                                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                                                    (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                                                }
+                                            />
+                                        </Form.Item>
+                                    )
+                                }]}
+                            />
                             <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 52, borderRadius: 14, fontWeight: 600, marginTop: 8, fontSize: 15 }} icon={<ArrowRightOutlined />} iconPosition="end">
                                 Sign In
                             </Button>
@@ -421,85 +431,107 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    {/* ─── STEP: Account Selection ─── */}
+                    {/* ─── STEP: Select Account ─── */}
                     {step === 'account' && (
                         <div>
-                            {loading
-                                ? <div style={{ textAlign: 'center', padding: 20 }}><LoadingOutlined style={{ fontSize: 32, color: 'var(--color-accent-blue)' }} /></div>
-                                : (
-                                    <List
-                                        dataSource={accounts}
-                                        style={{ maxHeight: 300, overflowY: 'auto' }}
-                                        renderItem={(item) => (
-                                            <List.Item
-                                                onClick={() => handleSelectAccount(item)}
-                                                className="sidebar-item"
-                                                style={{ padding: '12px 16px', borderRadius: 10, cursor: 'pointer', marginBottom: 8, border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 12 }}
-                                            >
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.accountName}</div>
-                                                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{item.accountId}</div>
-                                                </div>
-                                                <RightOutlined style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                                            </List.Item>
-                                        )}
-                                    />
-                                )
-                            }
+                            <Paragraph style={{ color: 'var(--color-text-secondary)', marginBottom: 20, fontSize: 13 }}>
+                                Choose the AWS account you want to manage DynamoDB tables in:
+                            </Paragraph>
+                            <div style={{ maxHeight: 320, overflowY: 'auto', borderRadius: 12, border: '1px solid var(--color-border-subtle)' }}>
+                                <List
+                                    dataSource={accounts}
+                                    renderItem={acc => (
+                                        <List.Item
+                                            key={acc.accountId}
+                                            onClick={() => handleSelectAccount(acc)}
+                                            style={{
+                                                padding: '14px 18px',
+                                                cursor: 'pointer',
+                                                transition: 'background 0.15s ease',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                borderBottom: '1px solid var(--color-border-subtle)'
+                                            }}
+                                            className="account-item-hover"
+                                        >
+                                            <div>
+                                                <Text style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', fontSize: 14 }}>
+                                                    {acc.accountName}
+                                                </Text>
+                                                <Text style={{ color: 'var(--color-text-tertiary)', fontSize: 12, fontFamily: 'monospace' }}>
+                                                    {acc.accountId}
+                                                </Text>
+                                            </div>
+                                            <RightOutlined style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }} />
+                                        </List.Item>
+                                    )}
+                                />
+                            </div>
+                            <Button type="text" block onClick={handleReset} style={{ color: 'var(--color-text-tertiary)', marginTop: 16 }}>
+                                Start Over
+                            </Button>
                         </div>
                     )}
 
-                    {/* ─── STEP: Role Selection ─── */}
+                    {/* ─── STEP: Select Role ─── */}
                     {step === 'role' && (
                         <div>
-                            {/* Selected account badge */}
-                            <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(88,166,255,0.06)', borderRadius: 10, border: '1px solid rgba(88,166,255,0.15)' }}>
-                                <Text style={{ fontSize: 11, color: 'var(--color-text-tertiary)', display: 'block', marginBottom: 2 }}>Account</Text>
-                                <Text style={{ fontWeight: 600, display: 'block' }}>{selectedAccount?.accountName}</Text>
-                                <Text style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{selectedAccount?.accountId}</Text>
+                            <Paragraph style={{ color: 'var(--color-text-secondary)', marginBottom: 20, fontSize: 13 }}>
+                                Choose the IAM role to assume in <strong>{selectedAccount?.accountName}</strong>:
+                            </Paragraph>
+                            <div style={{ maxHeight: 320, overflowY: 'auto', borderRadius: 12, border: '1px solid var(--color-border-subtle)' }}>
+                                <List
+                                    dataSource={roles}
+                                    renderItem={role => (
+                                        <List.Item
+                                            key={role.roleName}
+                                            onClick={() => handleSelectRole(role)}
+                                            style={{
+                                                padding: '14px 18px',
+                                                cursor: 'pointer',
+                                                transition: 'background 0.15s ease',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                borderBottom: '1px solid var(--color-border-subtle)'
+                                            }}
+                                            className="account-item-hover"
+                                        >
+                                            <Text style={{ fontWeight: 500, color: 'var(--color-text-primary)', fontSize: 14 }}>
+                                                {role.roleName}
+                                            </Text>
+                                            <RightOutlined style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }} />
+                                        </List.Item>
+                                    )}
+                                />
                             </div>
-
-                            {loading
-                                ? <div style={{ textAlign: 'center', padding: 20 }}><LoadingOutlined style={{ fontSize: 32, color: 'var(--color-accent-blue)' }} /></div>
-                                : (
-                                    <List
-                                        dataSource={roles}
-                                        style={{ maxHeight: 240, overflowY: 'auto' }}
-                                        renderItem={(item) => (
-                                            <List.Item
-                                                onClick={() => handleSelectRole(item)}
-                                                className="sidebar-item"
-                                                style={{ padding: '12px 16px', borderRadius: 10, cursor: 'pointer', marginBottom: 8, border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 12 }}
-                                            >
-                                                <Text style={{ fontWeight: 600, color: 'var(--color-text-primary)', flex: 1 }}>{item.roleName}</Text>
-                                                <RightOutlined style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                                            </List.Item>
-                                        )}
-                                    />
-                                )
-                            }
-                            <Button type="link" onClick={() => setStep('account')} style={{ paddingLeft: 0, marginTop: 4 }}>
-                                ← Back to accounts
+                            <Button type="text" block onClick={() => setStep('account')} style={{ color: 'var(--color-text-tertiary)', marginTop: 16 }}>
+                                Back to Accounts
                             </Button>
                         </div>
                     )}
 
                     {/* ─── STEP: Completing ─── */}
                     {step === 'completing' && (
-                        <div style={{ textAlign: 'center', padding: '8px 0 24px' }}>
-                            <LoadingOutlined style={{ fontSize: 48, color: 'var(--color-accent-blue)', marginBottom: 20 }} />
-                            <Paragraph style={{ fontSize: 15, color: 'var(--color-text-primary)', margin: 0, fontWeight: 500 }}>
-                                {statusMsg || 'Setting up your session…'}
+                        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                            <LoadingOutlined style={{ fontSize: 44, color: 'var(--color-accent-blue)', marginBottom: 20 }} />
+                            <Paragraph style={{ fontSize: 14, color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                                {statusMsg || 'Finalizing your session…'}
                             </Paragraph>
                         </div>
                     )}
 
                     {/* ─── STEP: Success ─── */}
                     {step === 'success' && (
-                        <div style={{ textAlign: 'center', padding: '8px 0 24px' }}>
-                            <CheckCircleOutlined style={{ fontSize: 60, color: 'var(--color-accent-green)', marginBottom: 20 }} />
-                            <Title level={4} style={{ color: 'var(--color-text-primary)', margin: '0 0 8px' }}>You're in!</Title>
-                            <Text style={{ color: 'var(--color-text-secondary)' }}>Loading your workspace…</Text>
+                        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                            <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-accent-green)', marginBottom: 16 }} />
+                            <Title level={4} style={{ margin: 0, color: 'var(--color-text-primary)' }}>
+                                Signed In!
+                            </Title>
+                            <Text style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4, display: 'block' }}>
+                                Loading your DynamoDB tables…
+                            </Text>
                         </div>
                     )}
                 </div>

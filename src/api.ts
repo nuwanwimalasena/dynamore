@@ -22,7 +22,7 @@ import type {
 export const api = {
     // Auth
     auth: {
-        initSSO: (params: { startUrl: string; region: string }) =>
+        initSSO: (params: { startUrl: string; region?: string }) =>
             invoke<any>('auth_init_sso', params),
         pollSSOToken: (params: { region: string; clientId: string; clientSecret: string; deviceCode: string; interval: number; expiresAt: number }) =>
             invoke<any>('auth_poll_sso_token', params),
@@ -30,10 +30,12 @@ export const api = {
             invoke<any>('auth_list_sso_accounts', params),
         listSSOAccountRoles: (params: { accessToken: string; region: string; accountId: string }) =>
             invoke<any>('auth_list_sso_account_roles', params),
-        completeSSOLogin: (params: { accessToken: string; region: string; ssoRegion?: string; accountId: string; roleName: string; startUrl: string }) =>
+        completeSSOLogin: (params: { accessToken: string; region?: string; ssoRegion?: string; accountId: string; roleName: string; startUrl: string }) =>
             invoke<any>('auth_complete_sso_login', params),
-        loginWithKeys: (params: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; region: string }) =>
+        loginWithKeys: (params: { accessKeyId: string; secretAccessKey: string; sessionToken?: string; region?: string }) =>
             invoke<any>('auth_login_with_keys', params),
+        switchRegion: (region: string) =>
+            invoke<{ success: boolean; region: string }>('auth_switch_region', { region }),
         logout: () => invoke<any>('auth_logout'),
         getSession: () => invoke<any>('auth_get_session'),
         getLastSSOConfig: () => invoke<any>('auth_get_last_sso_config'),
