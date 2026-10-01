@@ -26,6 +26,7 @@ fn main() {
             commands::auth::auth_logout,
             commands::auth::auth_get_session,
             commands::auth::auth_get_last_sso_config,
+            commands::auth::auth_get_last_region,
             commands::auth::auth_clear_sso_config,
             // Tables
             commands::tables::tables_list,

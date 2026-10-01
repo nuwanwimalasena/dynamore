@@ -16,6 +16,7 @@ interface LoginFormValues {
 
 export default function LoginPage() {
     const [form] = Form.useForm<LoginFormValues>()
+    const [keysForm] = Form.useForm()
     const { setSession, theme, setTheme } = useAppStore()
     const [step, setStep] = useState<LoginStep>('config')
     const [authType, setAuthType] = useState<'sso' | 'keys'>('sso')
@@ -33,11 +34,17 @@ export default function LoginPage() {
     const unsubscribeRef = useRef<(() => void) | null>(null)
 
     useEffect(() => {
+        window.api.auth.getLastRegion().then(lastRegion => {
+            const initialRegion = lastRegion || DEFAULT_AWS_REGION
+            form.setFieldsValue({ region: initialRegion })
+            keysForm.setFieldsValue({ region: initialRegion })
+        }).catch(() => {})
+
         window.api.auth.getLastSSOConfig().then(config => {
             if (config?.startUrl) {
                 form.setFieldsValue({
                     startUrl: config.startUrl,
-                    region: config.region || DEFAULT_AWS_REGION
+                    ...(config.region ? { region: config.region } : {})
                 })
             }
         }).catch(() => {})
@@ -47,7 +54,7 @@ export default function LoginPage() {
         })
         unsubscribeRef.current = unsub
         return () => unsub()
-    }, [form])
+    }, [form, keysForm])
 
     const handleError = (err: unknown, fallback = 'An error occurred') => {
         let msg = fallback
@@ -147,9 +154,12 @@ export default function LoginPage() {
     }
 
     const handleReset = async () => {
+        const rememberedRegion = await window.api.auth.getLastRegion().catch(() => null)
+        const fallbackRegion = rememberedRegion || DEFAULT_AWS_REGION
         await window.api.auth.clearSSOConfig()
         form.resetFields()
-        form.setFieldsValue({ region: DEFAULT_AWS_REGION })
+        form.setFieldsValue({ region: fallbackRegion })
+        keysForm.setFieldsValue({ region: fallbackRegion })
         setStep('config')
         setErrorMsg('')
         setStatusMsg('')
@@ -342,6 +352,7 @@ export default function LoginPage() {
 
                     {(step === 'config' || step === 'error') && authType === 'keys' && (
                         <Form
+                            form={keysForm}
                             layout="vertical"
                             onFinish={handleLoginWithKeys}
                             initialValues={{ region: DEFAULT_AWS_REGION }}

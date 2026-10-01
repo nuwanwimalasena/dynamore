@@ -27,6 +27,33 @@ pub async fn auth_get_last_sso_config(app: AppHandle) -> Result<Option<LastSsoCo
     Ok(config)
 }
 
+#[tauri::command]
+pub async fn auth_get_last_region(app: AppHandle) -> Result<Option<String>, String> {
+    let store = app.store("dynamore-config").map_err(|e| e.to_string())?;
+
+    // Priority 1: explicitly remembered lastSelectedRegion
+    if let Some(val) = store.get("lastSelectedRegion") {
+        if let Some(s) = val.as_str() {
+            let trimmed = s.trim();
+            if !trimmed.is_empty() {
+                return Ok(Some(trimmed.to_string()));
+            }
+        }
+    }
+
+    // Priority 2: fallback to lastSSOConfig region if present
+    if let Some(config_val) = store.get("lastSSOConfig") {
+        if let Ok(config) = serde_json::from_value::<LastSsoConfig>(config_val) {
+            let trimmed = config.region.trim();
+            if !trimmed.is_empty() {
+                return Ok(Some(trimmed.to_string()));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SsoInitResponse {
@@ -99,6 +126,10 @@ pub async fn auth_init_sso(
     store.set(
         "lastSSOConfig",
         serde_json::to_value(config).map_err(|e| e.to_string())?,
+    );
+    store.set(
+        "lastSelectedRegion",
+        serde_json::to_value(&effective_region).map_err(|e| e.to_string())?,
     );
 
     send_progress(&window, "registering", "Registering with AWS SSO…");
@@ -497,6 +528,10 @@ pub async fn auth_complete_sso_login(
         "lastSSOConfig",
         serde_json::to_value(config).map_err(|e| e.to_string())?,
     );
+    config_store.set(
+        "lastSelectedRegion",
+        serde_json::to_value(&effective_region).map_err(|e| e.to_string())?,
+    );
 
     // Invalidate cached client to force refresh with new session credentials
     state.invalidate().await;
@@ -634,6 +669,12 @@ pub async fn auth_login_with_keys(
                 serde_json::to_value(&session).map_err(|e| e.to_string())?,
             );
 
+            let config_store = app.store("dynamore-config").map_err(|e| e.to_string())?;
+            config_store.set(
+                "lastSelectedRegion",
+                serde_json::to_value(&region_str).map_err(|e| e.to_string())?,
+            );
+
             state.invalidate().await;
 
             Ok(LoginWithKeysResponse {
@@ -686,6 +727,11 @@ pub async fn auth_switch_region(
     );
 
     let config_store = app.store("dynamore-config").map_err(|e| e.to_string())?;
+    config_store.set(
+        "lastSelectedRegion",
+        serde_json::to_value(&target_region).map_err(|e| e.to_string())?,
+    );
+
     if let Some(config_val) = config_store.get("lastSSOConfig") {
         if let Ok(mut config) = serde_json::from_value::<LastSsoConfig>(config_val) {
             config.region = target_region.clone();

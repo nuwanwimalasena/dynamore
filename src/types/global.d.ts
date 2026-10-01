@@ -112,6 +112,7 @@ declare global {
                 logout: () => Promise<{ success: boolean }>
                 getSession: () => Promise<Session | null>
                 getLastSSOConfig: () => Promise<{ startUrl: string; region: string; accountId: string; roleName: string } | null>
+                getLastRegion: () => Promise<string | null>
                 clearSSOConfig: () => Promise<{ success: boolean }>
                 onSSOProgress: (callback: (step: string, message: string) => void) => () => void
             }
