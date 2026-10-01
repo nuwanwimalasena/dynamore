@@ -10,15 +10,27 @@
 :root {
   --color-bg: #0a0f1d;
   --color-surface: #111927;
+  --color-surface-1: #111927;
   --color-surface-2: #1a2332;
+  --color-surface-hover: #1f2d42;
   --color-border: #1e293b;
+  --color-border-subtle: #162032;
+  --color-primary: #00b4d8;
+  --color-primary-hover: #38bdf8;
+  --color-primary-active: #0096c7;
+  --color-primary-subtle: rgba(0, 180, 216, 0.12);
+  --color-primary-border: rgba(0, 180, 216, 0.35);
   --color-accent: #00b4d8;
   --color-accent-blue: #00b4d8;
+  --color-accent-hover: #38bdf8;
   --color-accent-teal: #2dd4bf;
   --color-accent-green: #2dd4bf;
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
   --color-text-muted: #64748b;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --radius-sm: 4px;
@@ -31,14 +43,24 @@
 :root[data-theme='light'] {
   --color-bg: #f0f7ff;
   --color-surface: #ffffff;
+  --color-surface-1: #ffffff;
   --color-surface-2: #e0f2fe;
+  --color-surface-hover: #dbeafe;
   --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-primary: #0284c7;
+  --color-primary-hover: #0ea5e9;
+  --color-primary-active: #0369a1;
+  --color-primary-subtle: rgba(2, 132, 199, 0.1);
+  --color-primary-border: rgba(2, 132, 199, 0.3);
   --color-accent: #0284c7;
   --color-accent-blue: #0284c7;
+  --color-accent-hover: #0ea5e9;
   --color-accent-teal: #0d9488;
   --color-accent-green: #0d9488;
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
   --color-text-muted: #94a3b8;
 }
 
@@ -53,19 +75,32 @@ html, body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow: auto; /* Show global scrollbars when viewport is below min dimensions */
 }
 
 #root {
+  min-width: 900px;
+  min-height: 600px;
   height: 100vh;
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
 
+.ant-app {
+  height: 100% !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0% !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -76,6 +111,139 @@ html, body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-accent-blue);
+}
+
+/* ==========================================
+   Links & Buttons Hover Effects
+   ========================================== */
+
+/* Universal links */
+a, .ant-typography a, .ant-btn-link {
+  color: var(--color-accent) !important;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--transition-fast), text-decoration var(--transition-fast);
+}
+a:hover, .ant-typography a:hover, .ant-btn-link:not(:disabled):hover {
+  color: var(--color-accent-hover) !important;
+  text-decoration: underline;
+}
+
+/* All Button transitions */
+.ant-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+}
+
+/* Primary Button Hover */
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+  box-shadow: 0 4px 14px rgba(0, 180, 216, 0.35) !important;
+  transform: translateY(-1px);
+}
+:root[data-theme='light'] .ant-btn-primary:not(:disabled):hover {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+}
+
+/* Default Button Hover */
+.ant-btn-default:not(:disabled):hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent-hover) !important;
+  background: var(--color-surface-hover) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+:root[data-theme='light'] .ant-btn-default:not(:disabled):hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+  background: var(--color-surface-hover) !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
+}
+
+/* Dashed Button Hover */
+.ant-btn-dashed:not(:disabled):hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+  background: var(--color-surface-2) !important;
+}
+
+/* Text Button Hover */
+.ant-btn-text:not(:disabled):hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+:root[data-theme='light'] .ant-btn-text:not(:disabled):hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Danger Button Hover */
+.ant-btn-dangerous:not(:disabled):hover,
+.ant-btn-text.ant-btn-dangerous:not(:disabled):hover {
+  color: #ff6b6b !important;
+  background: rgba(248, 81, 73, 0.12) !important;
+}
+:root[data-theme='light'] .ant-btn-dangerous:not(:disabled):hover,
+:root[data-theme='light'] .ant-btn-text.ant-btn-dangerous:not(:disabled):hover {
+  color: #e11d48 !important;
+  background: rgba(225, 29, 72, 0.08) !important;
+}
+
+/* Titlebar action buttons (Theme switcher, Logout, etc.) */
+.titlebar-btn {
+  color: var(--color-text-secondary) !important;
+  transition: all var(--transition-fast) !important;
+}
+.titlebar-btn:hover {
+  color: var(--color-text-primary) !important;
+  background: var(--color-surface-2) !important;
+  transform: scale(1.05);
+}
+
+/* Subtle Action Buttons (like Reset, Start Over, Back to Accounts) */
+.subtle-action-btn {
+  color: var(--color-text-tertiary) !important;
+  transition: all var(--transition-fast) !important;
+}
+.subtle-action-btn:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+:root[data-theme='light'] .subtle-action-btn:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Account / Role item in SSO login step */
+.account-item-hover {
+  transition: all var(--transition-fast) !important;
+  cursor: pointer;
+}
+.account-item-hover:hover {
+  background: var(--color-surface-2) !important;
+  border-color: var(--color-accent) !important;
+}
+
+/* Sidebar Table Item hover */
+.sidebar-table-item {
+  transition: all var(--transition-fast) !important;
+}
+.sidebar-table-item:hover {
+  background: var(--color-surface-2) !important;
+}
+.sidebar-table-item:hover .sidebar-item-action {
+  opacity: 1 !important;
+}
+.sidebar-item-action {
+  transition: opacity var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast) !important;
+}
+.sidebar-item-action:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+:root[data-theme='light'] .sidebar-item-action:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
 }
 
 /* --- Antd token overrides via CSS variables --- */
@@ -107,19 +275,26 @@ html, body {
 /* Layout */
 .app-layout {
   display: flex;
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
+  height: calc(100vh - var(--titlebar-height, 48px));
+  align-items: stretch;
   overflow: hidden;
 }
 
 /* Sidebar */
 .sidebar {
-  width: var(--sidebar-width);
-  background: var(--color-surface);
+  width: var(--sidebar-width, 260px);
+  background: var(--color-surface-1);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  align-self: stretch;
+  height: 100%;
+  min-height: 100%;
   overflow: hidden;
+  user-select: none;
 }
 
 .sidebar-resizer {
@@ -131,6 +306,9 @@ html, body {
   transition: background 0.2s ease;
   margin-left: -2px;
   margin-right: -2px;
+  align-self: stretch;
+  height: 100%;
+  min-height: 100%;
 }
 
 .sidebar-resizer:hover,
@@ -190,6 +368,10 @@ body.resizing {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  height: 100%;
   overflow: hidden;
   background: var(--color-bg);
 }

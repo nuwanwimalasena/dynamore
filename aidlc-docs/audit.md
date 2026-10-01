@@ -289,3 +289,60 @@ This audit log records all user inputs, agent actions, phase transitions, and ap
    - **React Frontend (`npm test` / Vitest)**: 15 tests across 4 test suites (`table_wizard`, `dynamo_types`, `expression_builder`, `appStore`).
    - Total **39 automated tests** running in ~2.5s with 100% pass rate.
 
+---
+
+### [2026-09-29T19:26:49+05:30] Inception Phase: Remember Last Selected Region Feature Request
+
+**Raw User Prompt**:
+> We need new feature, app should remember last selected region
+
+**Context**: Inception Phase - Workspace Detection & Requirements Analysis for Unit `remember-last-region`
+
+**Agent Actions**:
+1. Logged user request in audit log.
+2. Verified workspace: `dynamore` (Brownfield), current branch `dev`.
+3. Initialized requirements analysis and generated clarification questions in `aidlc-docs/inception/requirements/remember-last-region-questions.md`.
+
+---
+
+### [2026-09-29T19:44:36+05:30] Inception Phase: Requirements Clarification Responses
+
+**Raw User Prompt**:
+> Ask the questions using native user prompt with select options
+
+**Answers Collected**:
+- **Q1 (Context)**: Active session switching in Main Application & persisted across re-launches.
+- **Q2 (Persistence on switch)**: The switched region becomes the persistent default for future launches and logins.
+- **Q3 (Storage Layer)**: Tauri native persistent store (`dynamore-config`) via `tauri-plugin-store`.
+- **Q4 (Reset/Logout)**: Preserve the remembered region; reset/logout only clears credentials and account selections.
+
+**Agent Actions**:
+1. Documented requirements in [`aidlc-docs/inception/requirements/requirements.md`](file:///development/foss/dynamore/aidlc-docs/inception/requirements/requirements.md).
+2. Updated [`aidlc-docs/aidlc-state.md`](file:///development/foss/dynamore/aidlc-docs/aidlc-state.md) marking Requirements Analysis as COMPLETED.
+
+---
+
+### [2026-09-29T19:46:19+05:30] Transition to Construction Phase: Plan Approved
+
+**Raw User Prompt**:
+> yes
+
+**Context**: Inception Phase Approved -> Construction Phase (Functional Design, NFRs, Implementation & Tests)
+
+**Agent Actions**:
+1. Transitioned stage in `aidlc-docs/aidlc-state.md` to `IN_PROGRESS` (Functional Design).
+2. Generated functional design document: `aidlc-docs/construction/remember-last-region/functional-design/functional-design.md`.
+3. Generated NFR compliance assessment: `aidlc-docs/construction/remember-last-region/nfr-requirements/nfr-assessment.md`.
+4. Executed code implementation across Rust backend and React frontend:
+   - Added `auth_get_last_region` command in `src-tauri/src/commands/auth.rs` with `lastSelectedRegion` priority and fallback to `lastSSOConfig`.
+   - Updated `auth_switch_region`, `auth_complete_sso_login`, and `auth_login_with_keys` to persist `lastSelectedRegion` to `dynamore-config`.
+   - Registered `auth_get_last_region` in `src-tauri/src/main.rs`.
+   - Exposed `getLastRegion` in `src/api.ts` and `src/types/global.d.ts`.
+   - Integrated region pre-population in `src/pages/LoginPage.tsx` for both SSO and Keys forms, preserving preferred region across resets.
+   - Added unit test `test_last_region_resolution_priority` in `src-tauri/tests/auth_logic_tests.rs`.
+5. Executed full automated verification:
+   - `npm test`: 21 tests passed (6 test suites).
+   - `cargo test`: 27 tests passed across all suites.
+   - `npm run build`: Production build verified with zero errors.
+6. Generated build and test summary: `aidlc-docs/construction/remember-last-region/build-and-test/build-and-test-summary.md`.
+7. Marked unit `remember-last-region` as COMPLETED in `aidlc-docs/aidlc-state.md`.

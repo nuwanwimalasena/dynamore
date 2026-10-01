@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Table, Button, Space, Checkbox, Tooltip, Tag, Typography, Empty, App as AntApp } from 'antd'
+import { Table, Button, Space, Tooltip, Tag, Typography, Empty, App as AntApp } from 'antd'
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAppStore } from '../store/appStore'
@@ -175,11 +175,6 @@ export default function ResultsGrid({ items, mode, onEdit }: Props) {
                 borderBottom: '1px solid var(--color-border)',
                 flexShrink: 0
             }}>
-                <Checkbox
-                    indeterminate={selected.size > 0 && selected.size < items.length}
-                    checked={selected.size === items.length && items.length > 0}
-                    onChange={e => setSelected(e.target.checked ? new Set(items.map((_, i) => i)) : new Set())}
-                />
                 <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
                     {items.length} item(s){selected.size > 0 ? `, ${selected.size} selected` : ''}
                 </Text>

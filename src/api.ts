@@ -39,6 +39,7 @@ export const api = {
         logout: () => invoke<any>('auth_logout'),
         getSession: () => invoke<any>('auth_get_session'),
         getLastSSOConfig: () => invoke<any>('auth_get_last_sso_config'),
+        getLastRegion: () => invoke<string | null>('auth_get_last_region'),
         clearSSOConfig: () => invoke<any>('auth_clear_sso_config'),
         onSSOProgress: (callback: (step: string, message: string) => void) => {
             let unlisten: UnlistenFn | null = null;

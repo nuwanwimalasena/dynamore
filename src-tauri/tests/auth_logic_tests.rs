@@ -13,6 +13,25 @@ fn clean_start_url(url: &str) -> String {
     }
 }
 
+fn resolve_remembered_region(
+    last_selected_region: Option<&str>,
+    last_sso_config_region: Option<&str>,
+) -> Option<String> {
+    if let Some(r) = last_selected_region {
+        let trimmed = r.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    if let Some(r) = last_sso_config_region {
+        let trimmed = r.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
 #[test]
 fn test_clean_start_url_normalization() {
     assert_eq!(
@@ -140,4 +159,27 @@ fn test_region_switch_fingerprint_change() {
         fp1, fp2,
         "Fingerprint must change when region switches to invalidate cache"
     );
+}
+
+#[test]
+fn test_last_region_resolution_priority() {
+    // Case 1: Both explicit region and SSO config exist -> explicit region takes precedence
+    let r1 = resolve_remembered_region(Some("ap-southeast-1"), Some("us-west-2"));
+    assert_eq!(r1, Some("ap-southeast-1".to_string()));
+
+    // Case 2: Only legacy SSO config exists -> falls back to SSO config region
+    let r2 = resolve_remembered_region(None, Some("eu-central-1"));
+    assert_eq!(r2, Some("eu-central-1".to_string()));
+
+    // Case 3: Explicit region is whitespace -> falls back to SSO config region
+    let r3 = resolve_remembered_region(Some("   "), Some("sa-east-1"));
+    assert_eq!(r3, Some("sa-east-1".to_string()));
+
+    // Case 4: Neither exists -> returns None
+    let r4 = resolve_remembered_region(None, None);
+    assert_eq!(r4, None);
+
+    // Case 5: Both empty/whitespace -> returns None
+    let r5 = resolve_remembered_region(Some(""), Some("  "));
+    assert_eq!(r5, None);
 }

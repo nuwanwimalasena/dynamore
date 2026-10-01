@@ -4,6 +4,7 @@ import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutline
 import { useAppStore } from '../store/appStore'
 import { AWS_REGIONS, DEFAULT_AWS_REGION } from '../constants/regions'
 import type { AWSAccount, AWSRole } from '../types/global'
+import logoUrl from '../assets/logo.png'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -16,6 +17,7 @@ interface LoginFormValues {
 
 export default function LoginPage() {
     const [form] = Form.useForm<LoginFormValues>()
+    const [keysForm] = Form.useForm()
     const { setSession, theme, setTheme } = useAppStore()
     const [step, setStep] = useState<LoginStep>('config')
     const [authType, setAuthType] = useState<'sso' | 'keys'>('sso')
@@ -33,11 +35,17 @@ export default function LoginPage() {
     const unsubscribeRef = useRef<(() => void) | null>(null)
 
     useEffect(() => {
+        window.api.auth.getLastRegion().then(lastRegion => {
+            const initialRegion = lastRegion || DEFAULT_AWS_REGION
+            form.setFieldsValue({ region: initialRegion })
+            keysForm.setFieldsValue({ region: initialRegion })
+        }).catch(() => {})
+
         window.api.auth.getLastSSOConfig().then(config => {
             if (config?.startUrl) {
                 form.setFieldsValue({
                     startUrl: config.startUrl,
-                    region: config.region || DEFAULT_AWS_REGION
+                    ...(config.region ? { region: config.region } : {})
                 })
             }
         }).catch(() => {})
@@ -47,7 +55,7 @@ export default function LoginPage() {
         })
         unsubscribeRef.current = unsub
         return () => unsub()
-    }, [form])
+    }, [form, keysForm])
 
     const handleError = (err: unknown, fallback = 'An error occurred') => {
         let msg = fallback
@@ -147,9 +155,12 @@ export default function LoginPage() {
     }
 
     const handleReset = async () => {
+        const rememberedRegion = await window.api.auth.getLastRegion().catch(() => null)
+        const fallbackRegion = rememberedRegion || DEFAULT_AWS_REGION
         await window.api.auth.clearSSOConfig()
         form.resetFields()
-        form.setFieldsValue({ region: DEFAULT_AWS_REGION })
+        form.setFieldsValue({ region: fallbackRegion })
+        keysForm.setFieldsValue({ region: fallbackRegion })
         setStep('config')
         setErrorMsg('')
         setStatusMsg('')
@@ -187,21 +198,41 @@ export default function LoginPage() {
     }[step] ?? 0
 
     return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ minHeight: '100%', minWidth: '100%', display: 'flex', flexDirection: 'column', position: 'relative', flex: 1 }}>
             <div className="auth-bg" />
 
-            <div className="titlebar" style={{ background: 'transparent', borderBottom: 'none', paddingLeft: 80, paddingRight: 16 }}>
-                <div style={{ flex: 1 }} />
-                <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12, opacity: 0.6 }}>Dynamore</Text>
+            <div className="titlebar" style={{ background: 'transparent', borderBottom: 'none', paddingLeft: 16, paddingRight: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img
+                        src={logoUrl}
+                        alt="Dynamore Logo"
+                        style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 6,
+                            objectFit: 'contain',
+                            display: 'block'
+                        }}
+                    />
+                    <Text style={{
+                        color: 'var(--color-text-primary)',
+                        fontWeight: 700,
+                        fontSize: 16,
+                        letterSpacing: '-0.3px',
+                        lineHeight: 1
+                    }}>
+                        Dynamore
+                    </Text>
+                </div>
                 <div style={{ flex: 1 }} />
                 <div className="titlebar-nodrag" style={{ display: 'flex', alignItems: 'center' }}>
                     <Tooltip title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
                         <Button
                             type="text"
                             size="small"
+                            className="titlebar-btn"
                             icon={theme === 'light' ? <MoonOutlined /> : <SunOutlined />}
                             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                            style={{ color: 'var(--color-text-secondary)' }}
                         />
                     </Tooltip>
                 </div>
@@ -334,7 +365,7 @@ export default function LoginPage() {
                             >
                                 Continue with SSO
                             </Button>
-                            <Button type="text" block onClick={handleReset} style={{ color: 'var(--color-text-tertiary)', marginTop: 8 }}>
+                            <Button type="text" block onClick={handleReset} className="subtle-action-btn" style={{ marginTop: 8 }}>
                                 Reset
                             </Button>
                         </Form>
@@ -342,6 +373,7 @@ export default function LoginPage() {
 
                     {(step === 'config' || step === 'error') && authType === 'keys' && (
                         <Form
+                            form={keysForm}
                             layout="vertical"
                             onFinish={handleLoginWithKeys}
                             initialValues={{ region: DEFAULT_AWS_REGION }}
@@ -468,7 +500,7 @@ export default function LoginPage() {
                                     )}
                                 />
                             </div>
-                            <Button type="text" block onClick={handleReset} style={{ color: 'var(--color-text-tertiary)', marginTop: 16 }}>
+                            <Button type="text" block onClick={handleReset} className="subtle-action-btn" style={{ marginTop: 16 }}>
                                 Start Over
                             </Button>
                         </div>
@@ -506,7 +538,7 @@ export default function LoginPage() {
                                     )}
                                 />
                             </div>
-                            <Button type="text" block onClick={() => setStep('account')} style={{ color: 'var(--color-text-tertiary)', marginTop: 16 }}>
+                            <Button type="text" block onClick={() => setStep('account')} className="subtle-action-btn" style={{ marginTop: 16 }}>
                                 Back to Accounts
                             </Button>
                         </div>
