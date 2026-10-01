@@ -4,6 +4,7 @@ import { AmazonOutlined, LoadingOutlined, CheckCircleOutlined, ArrowRightOutline
 import { useAppStore } from '../store/appStore'
 import { AWS_REGIONS, DEFAULT_AWS_REGION } from '../constants/regions'
 import type { AWSAccount, AWSRole } from '../types/global'
+import logoUrl from '../assets/logo.png'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -197,21 +198,41 @@ export default function LoginPage() {
     }[step] ?? 0
 
     return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ minHeight: '100%', minWidth: '100%', display: 'flex', flexDirection: 'column', position: 'relative', flex: 1 }}>
             <div className="auth-bg" />
 
-            <div className="titlebar" style={{ background: 'transparent', borderBottom: 'none', paddingLeft: 80, paddingRight: 16 }}>
-                <div style={{ flex: 1 }} />
-                <Text style={{ color: 'var(--color-text-secondary)', fontSize: 12, opacity: 0.6 }}>Dynamore</Text>
+            <div className="titlebar" style={{ background: 'transparent', borderBottom: 'none', paddingLeft: 16, paddingRight: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img
+                        src={logoUrl}
+                        alt="Dynamore Logo"
+                        style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 6,
+                            objectFit: 'contain',
+                            display: 'block'
+                        }}
+                    />
+                    <Text style={{
+                        color: 'var(--color-text-primary)',
+                        fontWeight: 700,
+                        fontSize: 16,
+                        letterSpacing: '-0.3px',
+                        lineHeight: 1
+                    }}>
+                        Dynamore
+                    </Text>
+                </div>
                 <div style={{ flex: 1 }} />
                 <div className="titlebar-nodrag" style={{ display: 'flex', alignItems: 'center' }}>
                     <Tooltip title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
                         <Button
                             type="text"
                             size="small"
+                            className="titlebar-btn"
                             icon={theme === 'light' ? <MoonOutlined /> : <SunOutlined />}
                             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                            style={{ color: 'var(--color-text-secondary)' }}
                         />
                     </Tooltip>
                 </div>
@@ -344,7 +365,7 @@ export default function LoginPage() {
                             >
                                 Continue with SSO
                             </Button>
-                            <Button type="text" block onClick={handleReset} style={{ color: 'var(--color-text-tertiary)', marginTop: 8 }}>
+                            <Button type="text" block onClick={handleReset} className="subtle-action-btn" style={{ marginTop: 8 }}>
                                 Reset
                             </Button>
                         </Form>
@@ -479,7 +500,7 @@ export default function LoginPage() {
                                     )}
                                 />
                             </div>
-                            <Button type="text" block onClick={handleReset} style={{ color: 'var(--color-text-tertiary)', marginTop: 16 }}>
+                            <Button type="text" block onClick={handleReset} className="subtle-action-btn" style={{ marginTop: 16 }}>
                                 Start Over
                             </Button>
                         </div>
@@ -517,7 +538,7 @@ export default function LoginPage() {
                                     )}
                                 />
                             </div>
-                            <Button type="text" block onClick={() => setStep('account')} style={{ color: 'var(--color-text-tertiary)', marginTop: 16 }}>
+                            <Button type="text" block onClick={() => setStep('account')} className="subtle-action-btn" style={{ marginTop: 16 }}>
                                 Back to Accounts
                             </Button>
                         </div>

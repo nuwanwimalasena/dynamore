@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Tabs, Typography, Descriptions, Tag, Space, Empty, Spin, Button } from 'antd'
 import {
-    ThunderboltOutlined, ScanOutlined, UnorderedListOutlined,
+    ThunderboltOutlined, ScanOutlined,
     InfoCircleOutlined, PlusOutlined
 } from '@ant-design/icons'
 import { useAppStore } from '../store/appStore'
@@ -131,25 +131,51 @@ export default function TableDetailPage() {
                         Global Secondary Indexes ({gsiList.length})
                     </Title>
                     <Space direction="vertical" style={{ width: '100%' }}>
-                        {gsiList.map(gsi => (
-                            <div key={gsi.IndexName} style={{
-                                padding: '8px 12px',
-                                background: 'var(--color-surface-2)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius-sm)',
-                                fontSize: 12
-                            }}>
-                                <Text style={{ color: 'var(--color-accent-blue)', fontWeight: 600 }}>{gsi.IndexName}</Text>
-                                <br />
-                                <Space wrap style={{ marginTop: 4 }}>
-                                    {((gsi.KeySchema ?? []) as Array<{ AttributeName: string; KeyType: string }>).map(k => (
-                                        <Tag key={k.AttributeName} color={k.KeyType === 'HASH' ? 'blue' : 'cyan'} style={{ fontSize: 11 }}>
-                                            {k.AttributeName} ({k.KeyType})
-                                        </Tag>
-                                    ))}
-                                </Space>
-                            </div>
-                        ))}
+                        {gsiList.map((gsi: any, idx: number) => {
+                            const name = gsi.indexName ?? gsi.IndexName ?? (`GSI #${idx + 1}`)
+                            const status = gsi.indexStatus ?? gsi.IndexStatus
+                            const schema = ((gsi.keySchema ?? gsi.KeySchema ?? []) as any[]).map(k => ({
+                                attributeName: k.attributeName ?? k.AttributeName ?? k.attribute_name ?? '',
+                                keyType: (k.keyType ?? k.KeyType ?? k.key_type ?? '').toUpperCase()
+                            }))
+                            const proj = gsi.projection ?? gsi.Projection
+                            const projType = proj?.projectionType ?? proj?.ProjectionType
+
+                            return (
+                                <div key={name || idx} style={{
+                                    padding: '10px 14px',
+                                    background: 'var(--color-surface-2)',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: 12
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                        <Space size={8}>
+                                            <Text style={{ color: 'var(--color-accent-blue)', fontWeight: 600, fontSize: 13 }}>
+                                                {name}
+                                            </Text>
+                                            {status && (
+                                                <Tag color={status === 'ACTIVE' ? 'green' : 'orange'} style={{ fontSize: 11, margin: 0 }}>
+                                                    {status}
+                                                </Tag>
+                                            )}
+                                        </Space>
+                                        {projType && (
+                                            <Tag style={{ fontSize: 11, margin: 0 }}>
+                                                Projection: {projType}
+                                            </Tag>
+                                        )}
+                                    </div>
+                                    <Space wrap size={6}>
+                                        {schema.map(k => (
+                                            <Tag key={k.attributeName} color={k.keyType === 'HASH' ? 'blue' : 'cyan'} style={{ fontSize: 11 }}>
+                                                {k.attributeName} ({k.keyType})
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                </div>
+                            )
+                        })}
                     </Space>
                 </>
             )}
@@ -161,16 +187,17 @@ export default function TableDetailPage() {
                         Local Secondary Indexes ({lsiList.length})
                     </Title>
                     <Space wrap>
-                        {lsiList.map(lsi => (
-                            <Tag key={lsi.IndexName} color="purple">{lsi.IndexName}</Tag>
-                        ))}
+                        {lsiList.map((lsi: any, idx: number) => {
+                            const name = lsi.indexName ?? lsi.IndexName ?? (`LSI #${idx + 1}`)
+                            return (
+                                <Tag key={name || idx} color="purple">{name}</Tag>
+                            )
+                        })}
                     </Space>
                 </>
             )}
         </div>
     )
-
-    const resultItems = activeTab === 'query' ? queryResults : scanResults
 
     return (
         <>
@@ -239,11 +266,6 @@ export default function TableDetailPage() {
                             children: null
                         },
                         {
-                            key: 'items',
-                            label: <Space size={6}><UnorderedListOutlined />Items</Space>,
-                            children: null
-                        },
-                        {
                             key: 'info',
                             label: <Space size={6}><InfoCircleOutlined />Info</Space>,
                             children: null
@@ -276,16 +298,6 @@ export default function TableDetailPage() {
                                     onEdit={item => setEditItem(item)}
                                 />
                             </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'items' && (
-                        <div style={{ flex: 1, overflow: 'hidden' }}>
-                            <ResultsGrid
-                                items={resultItems}
-                                mode={activeTab === 'items' ? 'scan' : activeTab}
-                                onEdit={item => setEditItem(item)}
-                            />
                         </div>
                     )}
 

@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Typography, Button, Tooltip, App as AntApp, Select } from 'antd'
-import { LogoutOutlined, CloudServerOutlined, SunOutlined, MoonOutlined, GlobalOutlined } from '@ant-design/icons'
+import { LogoutOutlined, SunOutlined, MoonOutlined, GlobalOutlined } from '@ant-design/icons'
+import logoUrl from '../assets/logo.png'
 import { useAppStore } from '../store/appStore'
 import { AWS_REGIONS } from '../constants/regions'
 import Sidebar from '../components/Sidebar'
@@ -94,12 +95,28 @@ export default function MainLayout() {
     }, [session, handleLogout, message])
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 600, minWidth: 900, width: '100%', flex: 1 }}>
             {/* Titlebar */}
             <div className="titlebar">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 80 }}>
-                    <CloudServerOutlined style={{ color: 'var(--color-accent-blue)', fontSize: 16 }} />
-                    <Text style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 16 }}>
+                    <img
+                        src={logoUrl}
+                        alt="Dynamore Logo"
+                        style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 6,
+                            objectFit: 'contain',
+                            display: 'block'
+                        }}
+                    />
+                    <Text style={{
+                        color: 'var(--color-text-primary)',
+                        fontWeight: 700,
+                        fontSize: 16,
+                        letterSpacing: '-0.3px',
+                        lineHeight: 1
+                    }}>
                         Dynamore
                     </Text>
                 </div>
@@ -134,18 +151,18 @@ export default function MainLayout() {
                             <Button
                                 type="text"
                                 size="small"
+                                className="titlebar-btn"
                                 icon={theme === 'light' ? <MoonOutlined /> : <SunOutlined />}
                                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                                style={{ color: 'var(--color-text-secondary)' }}
                             />
                         </Tooltip>
                         <Tooltip title="Log out">
                             <Button
                                 type="text"
                                 size="small"
+                                className="titlebar-btn"
                                 icon={<LogoutOutlined />}
                                 onClick={handleLogout}
-                                style={{ color: 'var(--color-text-secondary)' }}
                             />
                         </Tooltip>
                     </div>
@@ -153,7 +170,7 @@ export default function MainLayout() {
             </div>
 
             {/* Body */}
-            <div className="app-layout" style={{ '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}>
+            <div className="app-layout" style={{ '--sidebar-width': `${sidebarWidth}px`, flex: 1, height: 'calc(100% - var(--titlebar-height, 48px))' } as React.CSSProperties}>
                 <Sidebar />
                 <div
                     className={`sidebar-resizer ${isResizing ? 'resizing' : ''}`}

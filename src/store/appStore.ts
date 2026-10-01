@@ -24,8 +24,8 @@ interface AppStore {
     appendScanResults: (items: Record<string, unknown>[], key?: Record<string, unknown>) => void
 
     // UI
-    activeTab: 'query' | 'scan' | 'items' | 'info'
-    setActiveTab: (tab: 'query' | 'scan' | 'items' | 'info') => void
+    activeTab: 'query' | 'scan' | 'info'
+    setActiveTab: (tab: 'query' | 'scan' | 'info') => void
     selectedItem: Record<string, unknown> | null
     setSelectedItem: (item: Record<string, unknown> | null) => void
     theme: 'light' | 'dark'

@@ -165,6 +165,7 @@ export default function Sidebar() {
                         <Button
                             type="text"
                             size="small"
+                            className="sidebar-item-action"
                             icon={isPinned ? <PushpinFilled style={{ color: 'var(--color-accent)' }} /> : <PushpinOutlined />}
                             onClick={e => togglePin(name, e)}
                             style={{ width: 22, height: 22, padding: 0, opacity: isPinned ? 1 : 0.6 }}
@@ -175,6 +176,7 @@ export default function Sidebar() {
                             type="text"
                             size="small"
                             danger
+                            className="sidebar-item-action"
                             icon={<DeleteOutlined />}
                             onClick={e => { e.stopPropagation(); handleDeleteTable(name) }}
                             style={{ width: 22, height: 22, padding: 0, opacity: 0.6 }}
@@ -186,15 +188,20 @@ export default function Sidebar() {
     }
 
     return (
-        <aside style={{
-            width: 260,
-            background: 'var(--color-surface-1)',
-            borderRight: '1px solid var(--color-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            userSelect: 'none'
-        }}>
+        <aside
+            className="sidebar"
+            style={{
+                width: 'var(--sidebar-width, 260px)',
+                background: 'var(--color-surface-1)',
+                borderRight: '1px solid var(--color-border)',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                minHeight: '100%',
+                alignSelf: 'stretch',
+                userSelect: 'none'
+            }}
+        >
             {/* Header */}
             <div style={{
                 padding: '12px 14px 8px',
@@ -216,6 +223,7 @@ export default function Sidebar() {
                         <Button
                             type="text"
                             size="small"
+                            className="titlebar-btn"
                             icon={<ReloadOutlined spin={loading} />}
                             onClick={loadTables}
                             disabled={loading}
@@ -225,6 +233,7 @@ export default function Sidebar() {
                         <Button
                             type="text"
                             size="small"
+                            className="titlebar-btn"
                             icon={<PlusOutlined />}
                             onClick={() => setShowCreate(true)}
                         />

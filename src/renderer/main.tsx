@@ -16,7 +16,7 @@ function Root() {
 
     return (
         <ConfigProvider theme={theme === 'light' ? lightTheme : darkTheme}>
-            <AntApp>
+            <AntApp style={{ height: '100%', minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <App />
             </AntApp>
         </ConfigProvider>
